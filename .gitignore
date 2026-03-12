@@ -1,0 +1,54 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# WhatsApp session folder
+session/
+*.session
+auth_info*.json
+session.data
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Optional OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Downloads (if any)
+downloads/
+videos/
+audios/
+
+# Config files (secrets)
+config.js
+config.json
+secrets.js
+secrets.json
+
+# Build files
+dist/
+build/
+*.tsbuildinfo
