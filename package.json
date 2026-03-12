@@ -1,0 +1,34 @@
+{
+  "name": "DownloaderX",
+  "version": "1.0.0",
+  "description": "DownloaderX - Interactive WhatsApp bot created by MAINUL-X for downloading videos from YouTube, Facebook, Instagram, and TikTok using mainul-x-baileys.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "whatsapp-bot",
+    "mainul-x-baileys",
+    "video-downloader",
+    "youtube-downloader",
+    "facebook-downloader",
+    "instagram-downloader",
+    "tiktok-downloader",
+    "media-downloader"
+  ],
+  "author": "MAINUL-X",
+  "license": "MIT",
+  "dependencies": {
+    "mainul-x-baileys": "7.5.6-rc.6",
+    "chalk": "^5.6.2",
+    "dotenv": "^17.2.3",
+    "inquirer": "^12.9.6",
+    "pino": "^10.1.0",
+    "yt-dlp-exec": "^1.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
