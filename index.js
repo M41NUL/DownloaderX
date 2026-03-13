@@ -228,21 +228,21 @@ async function startBot() {
     }
 
     try {
-      // 1.5 second delay before requesting code to let socket initialize properly
-      setTimeout(async () => {
-          const code = await sock.requestPairingCode(waNumber);
-          // Insert hyphen in code to make it readable (e.g., AB12-CD34)
-          const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
-          
-          console.log(chalk.greenBright('\n✅ Pairing Code Generated!'));
-          console.log(chalk.yellowBright('📌 Your Code: '), chalk.bgBlue.white.bold(` ${formattedCode} `));
-          console.log(chalk.cyan('Open WhatsApp → Linked Devices → Link a Device → Link with Phone Number'));
-          console.log(chalk.gray('\nWaiting for you to enter the code in WhatsApp...\n'));
-      }, 1500);
+  await new Promise(resolve => setTimeout(resolve, 3000)); 
 
-    } catch (error) {
-      console.error(chalk.red('❌ Failed to request pairing code:'), error);
-    }
+  if (!sock.authState.creds.registered) {
+    const code = await sock.requestPairingCode(waNumber);
+    const formattedCode = code?.match(/.{1,4}/g)?.join('-') || code;
+    
+    console.log(chalk.greenBright('\n✅ Pairing Code Generated!'));
+    console.log(chalk.yellowBright('📌 Your Code: '), chalk.bgBlue.white.bold(` ${formattedCode} `));
+    console.log(chalk.cyan('Open WhatsApp → Linked Devices → Link a Device → Link with Phone Number'));
+    console.log(chalk.gray('\nWaiting for automatic connection...\n'));
+  }
+} catch (error) {
+  console.error(chalk.red('❌ Connection Error:'), error);
+}
+
   }
 }
 
@@ -251,3 +251,4 @@ async function startBot() {
 ========================= */
 
 startBot();
+
