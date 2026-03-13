@@ -475,26 +475,27 @@ export async function handler(sock, msg) {
   }
 
   /* ===============================
-  AUTO LINK DETECT
-  ================================ */
-  if (text) {
-    const platform = detectPlatform(text)
-    if (!platform) return
+AUTO LINK DETECT
+================================ */
+if (text) {
+  const platform = detectPlatform(text)
+  if (!platform) return
 
-    trackDownload(platform, from)
+  trackDownload(platform, from)
 
-    const downloaders = {
-      youtube: handleYouTubeDownloader,
-      facebook: handleFacebookDownloader,
-      instagram: handleInstagramDownloader,
-      tiktok: handleTikTokDownloader
-    }
-
-    const downloader = downloaders[platform]
-    if (downloader) {
-      await downloader(sock, from, text)
-    }
+  const downloaders = {
+    youtube: handleYouTubeDownloader,
+    facebook: handleFacebookDownloader,
+    instagram: handleInstagramDownloader,
+    tiktok: handleTikTokDownloader
   }
+
+  const downloader = downloaders[platform]
+  if (downloader) {
+    await downloader(sock, from, text)
+  }
+  return
+}
 
 } // End of handler function
 
