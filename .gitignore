@@ -5,10 +5,12 @@ yarn-debug.log*
 yarn-error.log*
 
 # WhatsApp session folder
-# session/
+session/
 *.session
 auth_info*.json
 session.data
+creds.json
+keys.json
 
 # Environment variables
 .env
@@ -41,12 +43,6 @@ temp/
 downloads/
 videos/
 audios/
-
-# Config files (secrets)
-config.js
-config.json
-secrets.js
-secrets.json
 
 # Build files
 dist/
