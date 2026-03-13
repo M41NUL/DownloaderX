@@ -2,8 +2,7 @@
 
 /**
  * =============================================
- *      MAINUL-X WhatsApp Media Downloader
- * =============================================
+ * MAINUL-X WhatsApp Media Downloader
  * Author: Md. Mainul Islam (MAINUL-X)
  * GitHub: https://github.com/M41NUL
  * Telegram: @mdmainulislaminfo
@@ -19,10 +18,12 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import process from 'process';
 import dotenv from 'dotenv';
+import figlet from 'figlet';
+
 import { handler } from './src/handler.js';
 import { wrapSendMessageGlobally } from './src/utils/typing.js';
 
-dotenv.config({ debug: false });
+dotenv.config({ debug:false });
 
 const originalError = console.error;
 const originalLog = console.log;
@@ -33,280 +34,317 @@ const originalStdoutWrite = process.stdout.write;
 ================================ */
 
 const FILTER_PATTERNS = [
-  'Bad MAC',
-  'Failed to decrypt message with any known session',
-  'Session error:',
-  'Failed to decrypt',
-  'Closing open session',
-  'Closing session:',
-  'SessionEntry',
-  '_chains:',
-  'registrationId:',
-  'currentRatchet:',
-  'indexInfo:',
-  '<Buffer',
-  'pubKey:',
-  'privKey:',
-  'baseKey:',
-  'remoteIdentityKey:',
-  'lastRemoteEphemeralKey:',
-  'ephemeralKeyPair:',
-  'chainKey:',
-  'chainType:',
-  'messageKeys:'
+'Bad MAC',
+'Failed to decrypt message with any known session',
+'Session error:',
+'Failed to decrypt',
+'Closing open session',
+'Closing session:',
+'SessionEntry',
+'_chains:',
+'registrationId:',
+'currentRatchet:',
+'indexInfo:',
+'<Buffer',
+'pubKey:',
+'privKey:',
+'baseKey:',
+'remoteIdentityKey:',
+'lastRemoteEphemeralKey:',
+'ephemeralKeyPair:',
+'chainKey:',
+'chainType:',
+'messageKeys:'
 ];
 
-process.stdout.write = function(chunk, encoding, callback) {
+process.stdout.write = function(chunk,encoding,callback){
 
-  const str = chunk?.toString() || '';
-  const shouldFilter = FILTER_PATTERNS.some(pattern => str.includes(pattern));
+const str = chunk?.toString() || '';
+const shouldFilter = FILTER_PATTERNS.some(p=>str.includes(p));
 
-  if (shouldFilter) {
+if(shouldFilter){
 
-    if (str.includes('Closing open session')) {
-      const cleanMsg = chalk.blue('🔒 Signal encryption updated\n');
-      return originalStdoutWrite.call(this, Buffer.from(cleanMsg), encoding, callback);
-    }
+if(str.includes('Closing open session')){
+const cleanMsg = chalk.blue('🔒 Signal encryption updated\n');
+return originalStdoutWrite.call(this,Buffer.from(cleanMsg),encoding,callback);
+}
 
-    if (typeof callback === 'function') callback();
-    return true;
-  }
+if(typeof callback === 'function') callback();
+return true;
+}
 
-  return originalStdoutWrite.call(this, chunk, encoding, callback);
+return originalStdoutWrite.call(this,chunk,encoding,callback);
+
 };
 
-console.error = function(...args) {
+console.error = function(...args){
 
-  const msg = args.join(' ');
+const msg = args.join(' ');
 
-  if (FILTER_PATTERNS.some(pattern => msg.includes(pattern))) {
+if(FILTER_PATTERNS.some(p=>msg.includes(p))){
 
-    if (msg.includes('Bad MAC')) {
-      console.log(chalk.yellow('🔄 Signal protocol securing connection...'));
-    }
+if(msg.includes('Bad MAC')){
+console.log(chalk.yellow('🔄 Signal protocol securing connection...'));
+}
 
-    return;
-  }
+return;
+}
 
-  originalError.apply(console, args);
+originalError.apply(console,args);
+
 };
 
-console.log = function(...args) {
+console.log = function(...args){
 
-  const msg = args.join(' ');
+const msg = args.join(' ');
 
-  if (FILTER_PATTERNS.some(pattern => msg.includes(pattern))) {
-    return;
-  }
+if(FILTER_PATTERNS.some(p=>msg.includes(p))) return;
 
-  originalLog.apply(console, args);
+originalLog.apply(console,args);
+
 };
 
 /* ===============================
    SESSION DIRECTORY
 ================================ */
 
-const authDir = path.join(process.cwd(), 'session');
+const authDir = path.join(process.cwd(),'session');
 
 /* ===============================
-   MAINUL-X ASCII BANNER
+   FIGLET BANNER
 ================================ */
-
-const bannerAscii = `
- __       __                  _______               __     
-/  |  _  /  |                /       \\             /  |    
-$$ | / \\ $$ |  ______        $$$$$$$  |  ______   _$$ |_   
-$$ |/$  \\$$ | /      \\       $$ |__$$ | /      \\ / $$   |  
-$$ /$$$  $$ | $$$$$$  |      $$    $$< /$$$$$$  |$$$$$$/   
-$$ $$/$$ $$ | /    $$ |      $$$$$$$  |$$ |  $$ |  $$ | __ 
-$$$$/  $$$$ |/$$$$$$$ |      $$ |__$$ |$$ \\__$$ |  $$ |/  |
-$$$/    $$$ |$$    $$ |      $$    $$/ $$    $$/   $$  $$/ 
-$$/      $$/  $$$$$$$/       $$$$$$$/   $$$$$$/     $$$$/  
-`;
 
 const features = [
-  '▷ YouTube Downloader',
-  'ⓕ Facebook Downloader',
-  '🅾 Instagram Downloader',
-  '★ TikTok Downloader',
+'▷ YouTube Downloader',
+'ⓕ Facebook Downloader',
+'🅾 Instagram Downloader',
+'★ TikTok Downloader'
 ];
 
+export function showBanner(){
+
+console.clear();
+
+const banner = figlet.textSync("MAINUL-X",{ font:"Slant" });
+
+console.log(chalk.cyanBright(banner));
+
+features.forEach(f=>{
+console.log(chalk.green(f));
+});
+
+console.log();
+
+console.log(chalk.gray("Developer: Md. Mainul Islam"));
+console.log(chalk.gray("GitHub: https://github.com/M41NUL"));
+
+console.log();
+
+}
+
 /* ===============================
-   SHOW TERMINAL BANNER
+   MEMORY PROTECTION
 ================================ */
 
-export function showBanner() {
+setInterval(()=>{
 
-  console.clear();
+const used = process.memoryUsage().heapUsed / 1024 / 1024;
 
-  const termWidth = process.stdout.columns || 80;
+if(used > 900){
 
-  bannerAscii.split('\n').forEach(line => {
+console.log(chalk.red("⚠ High RAM usage detected. Restarting bot..."));
+process.exit();
 
-    const padding = Math.max(0, Math.floor((termWidth - line.length) / 2));
-    console.log(' '.repeat(padding) + chalk.cyanBright(line));
-
-  });
-
-  console.log();
-
-  features.forEach(f => {
-
-    const padding = Math.max(0, Math.floor((termWidth - f.length) / 2));
-    console.log(' '.repeat(padding) + chalk.greenBright(f));
-
-  });
-
-  console.log();
-
-  const dev = "Developer: MAINUL-X";
-  const git = "GitHub: https://github.com/M41NUL";
-
-  console.log(chalk.gray(dev));
-  console.log(chalk.gray(git));
-  console.log();
 }
+
+},60000);
+
+/* ===============================
+   CRASH PROTECTION
+================================ */
+
+process.on("uncaughtException",(err)=>{
+console.log(chalk.red("Uncaught Exception"));
+console.log(err);
+});
+
+process.on("unhandledRejection",(err)=>{
+console.log(chalk.red("Unhandled Rejection"));
+console.log(err);
+});
+
+/* ===============================
+   DUPLICATE MESSAGE PROTECTION
+================================ */
+
+const processedMessages = new Set();
 
 /* ===============================
    START BOT
 ================================ */
 
-async function startBot() {
+async function startBot(){
 
-  showBanner();
+showBanner();
 
-  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+if(!fs.existsSync(authDir)){
+fs.mkdirSync(authDir);
+}
 
-  const sock = makeWASocket({
-    auth: state,
-    logger: pino({ level: 'silent' }),
-  });
+const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-  wrapSendMessageGlobally(sock);
+const sock = makeWASocket({
+auth: state,
+logger: pino({ level:'silent' })
+});
+
+wrapSendMessageGlobally(sock);
 
 /* ===============================
    CONNECTION EVENTS
 ================================ */
 
-  sock.ev.on('connection.update', async (update) => {
+sock.ev.on('connection.update', async(update)=>{
 
-    const { connection, lastDisconnect } = update;
+const { connection, lastDisconnect } = update;
 
-    if (connection === 'open') {
+if(connection === 'open'){
 
-      console.log(chalk.greenBright('✅ Connected to WhatsApp successfully!'));
-      console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
-      console.log(chalk.magenta('⚡ MAINUL-X Bot is ready!\n'));
+console.log(chalk.greenBright('✅ Connected to WhatsApp successfully!'));
+console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
+console.log(chalk.magenta('⚡ MAINUL-X Bot is ready!\n'));
 
-    }
+}
 
-    else if (connection === 'close') {
+else if(connection === 'close'){
 
-      const reason = lastDisconnect?.error?.output?.statusCode;
+const reason = lastDisconnect?.error?.output?.statusCode;
+const shouldReconnect = reason !== DisconnectReason.loggedOut;
 
-      const shouldReconnect = reason !== DisconnectReason.loggedOut;
+if(shouldReconnect){
 
-      if (shouldReconnect) {
+console.log(chalk.yellow('🔁 Connection lost, reconnecting...\n'));
 
-        console.log(chalk.yellow('🔁 Connection lost, reconnecting...\n'));
-        startBot();
+setTimeout(()=>{
+startBot();
+},3000);
 
-      }
+}
 
-      else {
+else{
 
-        console.log(chalk.red('❌ Session invalid.'));
-        console.log(chalk.red('Delete the session folder and login again.\n'));
+console.log(chalk.red('❌ Session invalid.'));
+console.log(chalk.red('Delete the session folder and login again.\n'));
 
-      }
+}
 
-    }
+}
 
-  });
+});
 
 /* ===============================
    SAVE CREDS
 ================================ */
 
-  sock.ev.on('creds.update', saveCreds);
+sock.ev.on('creds.update', saveCreds);
 
 /* ===============================
    MESSAGE LISTENER
 ================================ */
 
-  sock.ev.on('messages.upsert', async (m) => {
+sock.ev.on('messages.upsert', async(m)=>{
 
-    const msg = m.messages?.[0];
+const msg = m.messages?.[0];
 
-    if (!msg || msg.key.fromMe) return;
+if(!msg) return;
+if(msg.key.fromMe) return;
 
-    try {
+if(processedMessages.has(msg.key.id)) return;
+processedMessages.add(msg.key.id);
 
-      await handler(sock, msg);
+try{
 
-    }
+await handler(sock,msg);
 
-    catch (err) {
+}
 
-      console.error(chalk.red('[Handler Error]'), err);
+catch(err){
 
-    }
+console.error(chalk.red('[Handler Error]'),err);
 
-  });
+}
+
+});
 
 /* ===============================
    PAIRING CODE LOGIN
 ================================ */
 
-  const files = fs.readdirSync(authDir).filter(f => f.endsWith('.json'));
+const files = fs.readdirSync(authDir).filter(f=>f.endsWith('.json'));
 
-  if (files.length === 0) {
+if(files.length === 0){
 
-    let waNumber;
+let waNumber;
 
-    try {
+try{
 
-      const response = await inquirer.prompt([
+const response = await inquirer.prompt([
+{
+type:'input',
+name:'waNumber',
+message:chalk.cyanBright('📱 Enter your WhatsApp number (country code, no +):'),
+validate:(input)=> /^\d{8,}$/.test(input) ? true : 'Invalid phone number'
+}
+]);
 
-        {
-          type: 'input',
-          name: 'waNumber',
-          message: chalk.cyanBright('📱 Enter your WhatsApp number (country code, no +):'),
-          validate: (input) => /^\d{8,}$/.test(input) ? true : 'Invalid phone number'
-        },
-
-      ]);
-
-      waNumber = response.waNumber;
-
-    }
-
-    catch (err) {
-
-      if (err.name === 'ExitPromptError') process.exit(0);
-      else throw err;
-
-    }
-
-    try {
-
-      const code = await sock.requestPairingCode(waNumber);
-
-      console.log(chalk.greenBright('\n✅ Pairing Code Generated!'));
-      console.log(chalk.yellowBright('📌 Your Code:'), chalk.bold.magenta(code));
-      console.log(chalk.cyan('Open WhatsApp → Linked Devices → Link a Device'));
-      console.log(chalk.greenBright('\nWaiting for connection...\n'));
-
-    }
-
-    catch (error) {
-
-      console.error(chalk.red('❌ Error requesting pairing code:'), error);
-
-    }
-
-  }
+waNumber = response.waNumber;
 
 }
 
-startBot();
+catch(err){
+
+if(err.name === 'ExitPromptError') process.exit(0);
+else throw err;
+
+}
+
+try{
+
+const code = await sock.requestPairingCode(waNumber);
+
+console.log(chalk.greenBright('\n✅ Pairing Code Generated!'));
+console.log(chalk.yellowBright('📌 Your Code:'),chalk.bold.magenta(code));
+console.log(chalk.cyan('Open WhatsApp → Linked Devices → Link a Device'));
+console.log(chalk.greenBright('\nWaiting for connection...\n'));
+
+}
+
+catch(error){
+
+console.error(chalk.red('❌ Error requesting pairing code:'),error);
+
+}
+
+}
+
+}
+
+/* ===============================
+   AUTO RESTART SYSTEM
+================================ */
+
+function runBot(){
+
+startBot().catch(err=>{
+
+console.log(chalk.red("Bot crashed. Restarting..."));
+
+setTimeout(()=>{
+runBot();
+},5000);
+
+});
+
+}
+
+runBot();
