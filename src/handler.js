@@ -359,6 +359,37 @@ return
 
 }
 
+  
+/* ===============================
+AUTO WELCOME + MENU
+================================ */
+
+if(text && !text.startsWith("!") && !detectPlatform(text)){
+
+await sock.sendMessage(from,{
+text:`👋 Welcome to *MAINUL-X Downloader Bot*
+
+Send a video link directly or choose a platform below.
+
+📥 Supported Platforms
+• YouTube
+• Facebook
+• Instagram
+• TikTok`
+})
+
+if(state.step !== "menuShown"){
+
+await sendDownloaderMenu(sock,from)
+
+userState.set(from,{step:"menuShown"})
+
+}
+
+return
+
+}
+
 /* ===============================
 AUTO LINK DETECT
 ================================ */
@@ -519,3 +550,4 @@ rows:[
 })
 
 }
+
