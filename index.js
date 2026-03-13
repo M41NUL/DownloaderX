@@ -241,6 +241,8 @@ console.log(err)
 
 })
 
+async function startBot(){
+
 /* =========================
 PAIRING LOGIN
 ========================= */
@@ -287,5 +289,5 @@ console.log()
 
 }
 
+}
 startBot()
-
