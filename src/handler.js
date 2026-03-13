@@ -20,12 +20,17 @@ import { validateUrl, detectPlatform } from "./utils/validateUrl.js"
 const menuImagePath = path.join(process.cwd(), "src/assets/menu.jpg")
 const BOT_START_TIME = Date.now()
 
-export async function handler(sock, msg) {
+const messageCache = new Set()
 
-if (!msg?.message) return
+export async function handler(sock,msg){
+
+if(!msg?.message) return
+
+if(messageCache.has(msg.key.id)) return
+messageCache.add(msg.key.id)
 
 const from = msg.key.remoteJid
-const state = userState.get(from) || { step: "start" }
+const state = userState.get(from) || {step:"start"}
 
 const text =
 msg.message?.conversation ||
@@ -34,40 +39,81 @@ msg.message?.imageMessage?.caption ||
 msg.message?.videoMessage?.caption
 
 
-if (text?.toLowerCase() === "!ping" || text?.toLowerCase() === "ping") {
+if(text?.toLowerCase()==="!ping"||text?.toLowerCase()==="ping"){
 
 const start = Date.now()
 
-await sock.sendMessage(from,{text:"🏓 Pinging..."})
+const pingMsg = await sock.sendMessage(from,{text:"🏓 Pinging..."})
 
 const end = Date.now()
 
 await sock.sendMessage(from,{
-text:`⚡ *Pong!*
-📶 Response Time: *${end-start}ms*`
+text:`⚡ *Pong!*\n📶 Response Time: *${end-start}ms*`,
+edit:pingMsg.key
 })
 
 return
 }
 
 
-if (text?.toLowerCase() === "!uptime" || text?.toLowerCase() === "uptime") {
+if(text?.toLowerCase()==="!uptime"||text?.toLowerCase()==="uptime"){
 
-const uptime = Math.floor((Date.now() - BOT_START_TIME) / 1000)
+const uptime = Math.floor((Date.now()-BOT_START_TIME)/1000)
 
-const hours = Math.floor(uptime / 3600)
-const minutes = Math.floor((uptime % 3600) / 60)
-const seconds = uptime % 60
+const h = Math.floor(uptime/3600)
+const m = Math.floor((uptime%3600)/60)
+const s = uptime%60
 
 await sock.sendMessage(from,{
-text:`⏱ *Bot Uptime*
-
-📆 ${hours}h ${minutes}m ${seconds}s
-🕒 Since: ${new Date(BOT_START_TIME).toLocaleString()}`
+text:`⏱ *Bot Uptime*\n\n${h}h ${m}m ${s}s`
 })
 
 return
 }
+
+
+if(text?.toLowerCase()==="!dev"||text?.toLowerCase()==="developer"){
+
+await sock.sendMessage(from,{
+text:`👨‍💻 *Developer Information*
+
+Name: Md. Mainul Islam
+Alias: MAINUL-X
+
+GitHub:
+https://github.com/M41NUL
+
+Telegram:
+https://t.me/mdmainulislaminfo
+
+Email:
+githubmainul@gmail.com`,
+buttons:[
+{
+buttonId:"github",
+buttonText:{displayText:"🌐 GitHub"},
+type:1
+},
+{
+buttonId:"menu",
+buttonText:{displayText:"📋 Menu"},
+type:1
+}
+],
+headerType:1
+})
+
+return
+}
+
+
+if(text?.toLowerCase()==="!menu"||text?.toLowerCase()==="menu"){
+
+await sendDownloaderMenu(sock,from)
+
+return
+}
+
 
 
 let rowId
@@ -88,29 +134,7 @@ rowId = msg.message.listResponseMessage.singleSelectReply.selectedRowId
 
 }
 
-}catch(err){
-
-console.error("[MAINUL-X] Button parse error",err)
-
-}
-
-
-const btnId = msg.message?.buttonsResponseMessage?.selectedButtonId
-
-if(btnId === "back_to_menu"){
-
-await sock.sendPresenceUpdate("composing",from)
-
-await new Promise(r=>setTimeout(r,800))
-
-await sendDownloaderMenu(sock,from)
-
-await sock.sendPresenceUpdate("paused",from)
-
-userState.set(from,{step:"menuMain"})
-
-return
-}
+}catch(e){}
 
 
 if(rowId){
@@ -121,7 +145,7 @@ case "yt_downloader":
 
 userState.set(from,{step:"yt_wait_url"})
 
-await sock.sendMessage(from,{text:"📌 Send your *YouTube* video link"})
+await sock.sendMessage(from,{text:"📌 Send your YouTube video link"})
 
 break
 
@@ -130,7 +154,7 @@ case "fb_downloader":
 
 userState.set(from,{step:"fb_wait_url"})
 
-await sock.sendMessage(from,{text:"📌 Send your *Facebook* video link"})
+await sock.sendMessage(from,{text:"📌 Send your Facebook video link"})
 
 break
 
@@ -139,7 +163,7 @@ case "ig_downloader":
 
 userState.set(from,{step:"ig_wait_url"})
 
-await sock.sendMessage(from,{text:"📌 Send your *Instagram* video link"})
+await sock.sendMessage(from,{text:"📌 Send your Instagram video link"})
 
 break
 
@@ -148,7 +172,7 @@ case "tt_downloader":
 
 userState.set(from,{step:"tt_wait_url"})
 
-await sock.sendMessage(from,{text:"📌 Send your *TikTok* video link"})
+await sock.sendMessage(from,{text:"📌 Send your TikTok video link"})
 
 break
 
@@ -163,6 +187,14 @@ if(text){
 const platform = detectPlatform(text)
 
 if(platform){
+
+const progress = await sock.sendMessage(from,{text:"⏳ Downloading 0%"})
+
+await sock.sendMessage(from,{text:"📥 Downloading 25%",edit:progress.key})
+
+await sock.sendMessage(from,{text:"📦 Downloading 50%",edit:progress.key})
+
+await sock.sendMessage(from,{text:"🚀 Sending video...",edit:progress.key})
 
 let downloader
 
@@ -199,11 +231,8 @@ switch(state.step){
 case "yt_wait_url":
 
 if(!validateUrl(text,"youtube")){
-
 await sock.sendMessage(from,{text:"❌ Invalid YouTube link"})
-
 return
-
 }
 
 await handleYouTubeDownloader(sock,from,text)
@@ -214,11 +243,8 @@ break
 case "fb_wait_url":
 
 if(!validateUrl(text,"facebook")){
-
 await sock.sendMessage(from,{text:"❌ Invalid Facebook link"})
-
 return
-
 }
 
 await handleFacebookDownloader(sock,from,text)
@@ -229,11 +255,8 @@ break
 case "ig_wait_url":
 
 if(!validateUrl(text,"instagram")){
-
 await sock.sendMessage(from,{text:"❌ Invalid Instagram link"})
-
 return
-
 }
 
 await handleInstagramDownloader(sock,from,text)
@@ -244,11 +267,8 @@ break
 case "tt_wait_url":
 
 if(!validateUrl(text,"tiktok")){
-
 await sock.sendMessage(from,{text:"❌ Invalid TikTok link"})
-
 return
-
 }
 
 await handleTikTokDownloader(sock,from,text)
@@ -270,7 +290,7 @@ return
 }
 
 
-if(state.step === "start" || state.step === "menuMain"){
+if(state.step==="start"||state.step==="menuMain"){
 
 await sendDownloaderMenu(sock,from)
 
@@ -294,70 +314,83 @@ return
 
 await sock.sendMessage(from,{
 
-image: fs.readFileSync(menuImagePath),
+image:fs.readFileSync(menuImagePath),
 
-caption:`🤖 *MAINUL-X Media Downloader*
+caption:`🤖 *MAINUL-X Downloader Bot*
 
-Select a platform to download videos`,
+Choose a platform`,
 
-footer:"© 2026 MAINUL-X",
+footer:"MAINUL-X SYSTEM",
 
 interactiveButtons:[
+
 {
 name:"single_select",
 buttonParamsJson:JSON.stringify({
-title:"📱 Video Downloader",
+
+title:"📥 Video Downloader",
+
 sections:[
 {
-title:"Available Platforms",
+title:"Platforms",
 rows:[
+
 {
-title:"🎥 YouTube Downloader",
-description:"Download videos from YouTube",
+title:"🎥 YouTube",
+description:"Download YouTube video",
 id:"yt_downloader"
 },
+
 {
-title:"📘 Facebook Downloader",
-description:"Download videos from Facebook",
+title:"📘 Facebook",
+description:"Download Facebook video",
 id:"fb_downloader"
 },
+
 {
-title:"📸 Instagram Downloader",
+title:"📸 Instagram",
 description:"Download Instagram reels",
 id:"ig_downloader"
 },
+
 {
-title:"🎵 TikTok Downloader",
-description:"Download TikTok without watermark",
+title:"🎵 TikTok",
+description:"Download TikTok video",
 id:"tt_downloader"
 }
+
 ]
 }
-]
-})
-}
+
 ]
 
 })
 
 }
+
+]
+
+})
+
+}
+
 
 
 async function sendTextMenu(sock,from){
 
-const menuText = `🤖 MAINUL-X Media Downloader
+const menu = `🤖 MAINUL-X Downloader Bot
 
-🎥 YouTube Downloader
-📘 Facebook Downloader
-📸 Instagram Downloader
-🎵 TikTok Downloader
+🎥 YouTube
+📘 Facebook
+📸 Instagram
+🎵 TikTok
 
-Commands
+⚙ System Commands
 !ping
 !uptime
+!dev
+!menu`
 
-Powered by MAINUL-X`
-
-await sock.sendMessage(from,{text:menuText})
+await sock.sendMessage(from,{text:menu})
 
 }
