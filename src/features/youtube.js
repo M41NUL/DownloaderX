@@ -7,7 +7,7 @@
  * Telegram: @mdmainulislaminfo
  * Email: githubmainul@gmail.com
  * =============================================
- * Feature: YouTube Video Downloader
+ * Feature: YouTube Video Downloader with Progress Bar
  * =============================================
  */
 
@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * YouTube video downloader function
+ * YouTube video downloader function with progress bar
  * @param {Object} sock - WhatsApp socket connection
  * @param {String} from - Sender's chat ID
  * @param {String} url - YouTube video URL
@@ -38,13 +38,15 @@ export async function handleYouTubeDownloader(sock, from, url) {
     return;
   }
 
-  // Send processing message
-  await sock.sendMessage(from, { text: '📥 Downloading YouTube video... Please wait.' });
+  // Send initial message
+  await sock.sendMessage(from, { text: '⏳ Initializing YouTube download...' });
 
   const tempFile = `${__dirname}/tmp_yt_${Date.now()}.mp4`;
 
   try {
     // Get video info first
+    await sock.sendMessage(from, { text: '🔍 Fetching video information...' });
+    
     const videoInfo = await ytdlpExec(url, {
       dumpSingleJson: true,
       noWarnings: true,
@@ -57,6 +59,27 @@ export async function handleYouTubeDownloader(sock, from, url) {
     const seconds = videoDuration % 60;
     const durationText = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
+    await sock.sendMessage(from, { text: `📹 *Video Found*\nTitle: ${videoTitle}\nDuration: ${durationText}\n\n⬇️ Starting download...` });
+
+    // Progress tracking
+    let lastProgress = 0;
+    const progressInterval = setInterval(async () => {
+      if (lastProgress < 100) {
+        const progressMsg = [
+          '⏳ Downloading... 0%',
+          '🔄 25% downloaded',
+          '📥 50% downloaded',
+          '📦 75% downloaded',
+          '✅ 100% complete'
+        ][Math.floor(lastProgress / 25)];
+        
+        if (lastProgress % 25 === 0 && lastProgress < 100) {
+          await sock.sendMessage(from, { text: progressMsg });
+        }
+        lastProgress += 25;
+      }
+    }, 2000);
+
     // Download video
     await ytdlpExec(url, { 
       output: tempFile, 
@@ -65,16 +88,23 @@ export async function handleYouTubeDownloader(sock, from, url) {
       preferFreeFormats: true
     });
 
+    clearInterval(progressInterval);
+    await sock.sendMessage(from, { text: '✅ Download complete! Now sending video...' });
+
     // Check if file exists
     if (!fs.existsSync(tempFile)) {
       throw new Error('Download failed - file not created');
     }
 
+    // Get file size
+    const stats = fs.statSync(tempFile);
+    const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+
     // Send video to WhatsApp
     await sock.sendMessage(from, {
       video: fs.readFileSync(tempFile),
       mimetype: 'video/mp4',
-      caption: `🎥 YouTube Video Downloaded Successfully!\n━━━━━━━━━━━━━━━━━━━━━\n📌 Title: ${videoTitle.substring(0, 50)}${videoTitle.length > 50 ? '...' : ''}\n⏱️ Duration: ${durationText}\n🔗 Source: YouTube\n⚡ Powered by MAINUL-X`
+      caption: `🎥 *YouTube Video Downloaded!*\n━━━━━━━━━━━━━━━━━━━━━\n📌 *Title:* ${videoTitle.substring(0, 50)}${videoTitle.length > 50 ? '...' : ''}\n⏱️ *Duration:* ${durationText}\n📦 *Size:* ${fileSizeMB} MB\n🔗 *Source:* YouTube\n━━━━━━━━━━━━━━━━━━━━━\n⚡ Powered by MAINUL-X`
     });
 
     // Clean up temp file
