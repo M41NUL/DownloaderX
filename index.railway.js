@@ -144,7 +144,7 @@ sock.ev.on("creds.update",saveCreds)
 MESSAGE LISTENER
 ========================= */
 
-sock.ev.on("messages.upsert",async(m)=>{
+sock.ev.on("messages.upsert", async (m) => {
 
 try{
 
@@ -154,7 +154,7 @@ if(!msg) return
 if(!msg.message) return
 if(msg.key.fromMe) return
 
-messagesProcessed++
+console.log("📩 Message Received")
 
 await handler(sock,msg)
 
