@@ -155,8 +155,16 @@ ENABLE TYPING SYSTEM
 wrapSendMessageGlobally(sock)
 
 /* =========================
-PAIRING LOGIN
+CONNECTION EVENTS
 ========================= */
+
+sock.ev.on("connection.update", async (update) => {
+
+const { connection, lastDisconnect } = update
+
+/* ===== PAIRING LOGIN ===== */
+
+if(connection === "connecting"){
 
 const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
 
@@ -180,22 +188,20 @@ console.log()
 
 }
 
-/* =========================
-CONNECTION EVENTS
-========================= */
+}
 
-sock.ev.on("connection.update",(update)=>{
+/* ===== CONNECTED ===== */
 
-const { connection, lastDisconnect } = update
-
-if(connection==="open"){
+if(connection === "open"){
 
 showBanner()
 showStatus(sock)
 
 }
 
-if(connection==="close"){
+/* ===== DISCONNECTED ===== */
+
+if(connection === "close"){
 
 const shouldReconnect =
 lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
@@ -218,38 +224,7 @@ console.log(chalk.red("Session logged out"))
 
 })
 
-/* =========================
-SAVE CREDS
-========================= */
-
-sock.ev.on("creds.update",saveCreds)
-
-/* =========================
-MESSAGE LISTENER
-========================= */
-
-sock.ev.on("messages.upsert",async(m)=>{
-
-const msg = m.messages?.[0]
-
-if(!msg) return
-if(msg.key.fromMe) return
-
-messagesProcessed++
-
-try{
-
-await handler(sock,msg)
-
-}catch(err){
-
-console.log(chalk.red("Handler Error"))
-console.log(err)
-
-}
-
-})
-
 }
 
 startBot()
+
