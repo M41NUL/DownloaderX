@@ -39,9 +39,8 @@
 
   "homepage": "https://github.com/M41NUL/DownloaderX",
 
-"engines": {
-  "node": ">=20"
-}
+  "engines": {
+    "node": ">=20"
   },
 
   "dependencies": {
