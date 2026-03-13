@@ -8,132 +8,84 @@
  * Telegram: @mdmainulislaminfo
  * Email: githubmainul@gmail.com
  * Version: 1.0.0
- * License: MIT
- * =============================================
- * This bot allows you to download videos from:
- * YouTube, Facebook, Instagram, and TikTok
- * directly through WhatsApp chat.
  * =============================================
  */
 
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'baileys';
+import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import process from 'process';
-import dotenv from 'dotenv';
+import qrcode from 'qrcode-terminal';
+import { fileURLToPath } from 'url';
 import { handler } from './src/handler.js';
-import { wrapSendMessageGlobally } from './src/utils/typing.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const originalError = console.error;
-const originalLog = console.log;
-const originalStdoutWrite = process.stdout.write;
+const authDir = path.join(__dirname, 'session');
 
-const FILTER_PATTERNS = [
-  'Bad MAC', 'Failed to decrypt message', 'Session error',
-  'Closing session', 'SessionEntry', '_chains:', 'registrationId:',
-  'currentRatchet:', 'indexInfo:', '<Buffer', 'pubKey:',
-  'privKey:', 'baseKey:', 'remoteIdentityKey:', 'chainKey:'
-];
+const banner = `
+${chalk.cyanBright('███╗   ███╗ █████╗ ██╗███╗   ██╗██╗   ██╗██╗     ██╗  ██╗')}
+${chalk.cyanBright('████╗ ████║██╔══██╗██║████╗  ██║██║   ██║██║     ██║  ██║')}
+${chalk.cyanBright('██╔████╔██║███████║██║██╔██╗ ██║██║   ██║██║     ███████║')}
+${chalk.cyanBright('██║╚██╔╝██║██╔══██║██║██║╚██╗██║██║   ██║██║     ██╔══██║')}
+${chalk.cyanBright('██║ ╚═╝ ██║██║  ██║██║██║ ╚████║╚██████╔╝███████╗██║  ██║')}
+${chalk.cyanBright('╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝')}
 
-process.stdout.write = function(chunk, encoding, callback) {
-  const str = chunk?.toString() || '';
-  if (FILTER_PATTERNS.some(p => str.includes(p))) {
-    if (typeof callback === 'function') callback();
-    return true;
-  }
-  return originalStdoutWrite.call(this, chunk, encoding, callback);
-};
-
-console.error = function(...args) {
-  const msg = args.join(' ');
-  if (!FILTER_PATTERNS.some(p => msg.includes(p))) {
-    originalError.apply(console, args);
-  }
-};
-
-console.log = function(...args) {
-  const msg = args.join(' ');
-  if (!FILTER_PATTERNS.some(p => msg.includes(p))) {
-    originalLog.apply(console, args);
-  }
-};
-
-const authDir = path.join(process.cwd(), 'session');
-
-const bannerAscii = `
-███╗   ███╗ █████╗ ██╗███╗   ██╗██╗   ██╗██╗     ██╗  ██╗
-████╗ ████║██╔══██╗██║████╗  ██║██║   ██║██║     ██║  ██║
-██╔████╔██║███████║██║██╔██╗ ██║██║   ██║██║     ███████║
-██║╚██╔╝██║██╔══██║██║██║╚██╗██║██║   ██║██║     ██╔══██║
-██║ ╚═╝ ██║██║  ██║██║██║ ╚████║╚██████╔╝███████╗██║  ██║
-╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
+${chalk.yellowBright('═══════════════════════════════════════════════════════════')}
+${chalk.greenBright('         WhatsApp Media Downloader Bot v2.0')}
+${chalk.blueBright('           Created by MAINUL-X 🇧🇩')}
+${chalk.yellowBright('═══════════════════════════════════════════════════════════')}
 `;
 
-const subBanner = `
-╔══════════════════════════════════════════════════════════╗
-║            WhatsApp Media Downloader Bot                 ║
-║                 Created by MAINUL-X                      ║
-╚══════════════════════════════════════════════════════════╝
-`;
-
-const features = [
-  '🎥 YouTube Downloader',
-  '📘 Facebook Downloader',
-  '📸 Instagram Downloader',
-  '🎵 TikTok Downloader',
-];
-
-export function showBanner() {
-  console.clear();
-  console.log(chalk.cyanBright(bannerAscii));
-  console.log(chalk.yellowBright(subBanner));
-  console.log();
-  features.forEach(f => console.log(chalk.greenBright(`   ${f}`)));
-  console.log(chalk.gray('─'.repeat(50)));
-  console.log(chalk.blueBright('⚡ Version: 1.0.0 | Made with ❤️ in Bangladesh'));
-  console.log();
-}
+console.log(banner);
 
 async function startBot() {
-  showBanner();
-
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
   const sock = makeWASocket({
     auth: state,
     logger: pino({ level: 'silent' }),
+    printQRInTerminal: false,
+    browser: ['DownloaderX', 'Chrome', '1.0.0']
   });
 
-  wrapSendMessageGlobally(sock);
-
+  // Handle QR Code
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      console.log(chalk.yellow('\n📱 Scan this QR code with WhatsApp:\n'));
+      qrcode.generate(qr, { small: true });
+      console.log(chalk.cyan('\nOr use pairing code option...\n'));
+    }
 
     if (connection === 'open') {
-      console.log(chalk.greenBright('✅ Connected to WhatsApp!'));
+      console.log(chalk.greenBright('\n✅ Connected to WhatsApp successfully!'));
       console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
+      console.log(chalk.magenta('⚡ Bot is ready! Send any video link to download.\n'));
     } else if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
       const shouldReconnect = reason !== DisconnectReason.loggedOut;
+      
       if (shouldReconnect) {
-        console.log(chalk.yellow('🔄 Reconnecting...'));
+        console.log(chalk.yellow('🔄 Connection lost, reconnecting...'));
         startBot();
       } else {
-        console.log(chalk.red('❌ Session expired. Please restart.'));
+        console.log(chalk.red('❌ Logged out. Please restart the bot.'));
       }
     }
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('messages.upsert', async (m) => {
-    const msg = m.messages?.[0];
+  // Message handler
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
     if (!msg || msg.key.fromMe) return;
+
     try {
       await handler(sock, msg);
     } catch (err) {
@@ -141,34 +93,39 @@ async function startBot() {
     }
   });
 
-  const files = fs.readdirSync(authDir).filter(f => f.endsWith('.json'));
+  // Handle pairing code if session doesn't exist
+  const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
+  
   if (files.length === 0) {
-    let waNumber;
     try {
-      const response = await inquirer.prompt([
+      const { number } = await inquirer.prompt([
         {
           type: 'input',
-          name: 'waNumber',
-          message: chalk.cyanBright('Enter WhatsApp number (without +):'),
-          validate: (input) => /^\d{8,}$/.test(input) ? true : 'Invalid number',
-        },
+          name: 'number',
+          message: chalk.cyan('Enter your WhatsApp number (with country code, no +):'),
+          validate: (input) => /^\d{10,}$/.test(input) ? true : 'Invalid number!'
+        }
       ]);
-      waNumber = response.waNumber;
-    } catch (err) {
-      if (err.name === 'ExitPromptError') process.exit(0);
-      else throw err;
-    }
 
-    try {
-      const code = await sock.requestPairingCode(waNumber);
-      console.log(chalk.greenBright('\n✅ Pairing Code:'));
-      console.log(chalk.yellowBright('📌 Code:'), chalk.bold.magenta(code));
-      console.log(chalk.cyan('Open WhatsApp > Linked Devices > Link Device'));
-    } catch (error) {
-      console.error(chalk.red('❌ Error:'), error);
+      console.log(chalk.yellow('\n⏳ Requesting pairing code...'));
+      
+      setTimeout(async () => {
+        const code = await sock.requestPairingCode(number);
+        console.log(chalk.greenBright('\n✅ Your pairing code:'));
+        console.log(chalk.bold.magenta(`\n   ${code}\n`));
+        console.log(chalk.cyan('Open WhatsApp > Linked Devices > Link a Device'));
+      }, 2000);
+      
+    } catch (err) {
+      console.error(chalk.red('Error:'), err);
     }
   }
 }
 
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log(chalk.yellow('\n\n👋 Shutting down...'));
+  process.exit(0);
+});
 
 startBot();
