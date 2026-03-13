@@ -37,7 +37,7 @@ function showBanner(){
 
 clearScreen()
 
-const banner = figlet.textSync("WA-BOT",{font:"Big"})
+const banner = figlet.textSync("M X-D L",{font:"Big"})
 console.log(chalk.cyan(banner))
 
 }
@@ -262,4 +262,5 @@ console.log()
 }
 
 startBot()
+
 
