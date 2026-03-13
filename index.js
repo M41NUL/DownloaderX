@@ -8,6 +8,7 @@
  * Project: DownloaderX - Multi Platform Video Downloader
  * =============================================
  */
+
 import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
 import pino from "pino"
 import fs from "fs"
@@ -16,7 +17,6 @@ import chalk from "chalk"
 import inquirer from "inquirer"
 import figlet from "figlet"
 import os from "os"
-import process from "process"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
@@ -96,9 +96,7 @@ MEMORY
 ========================= */
 
 function getMemory(){
-
 return Math.round(process.memoryUsage().rss/1024/1024)
-
 }
 
 /* =========================
@@ -110,30 +108,23 @@ function showStatus(sock){
 console.log(chalk.gray("────────────────────────"))
 
 console.log(chalk.green("Status  : Connected"))
-
 console.log(chalk.cyan(`User    : ${sock.user?.id}`))
-
 console.log(chalk.yellow(`Memory  : ${getMemory()} MB`))
-
 console.log(chalk.magenta(`CPU     : ${getCPU()} %`))
-
 console.log(chalk.blue(`Uptime  : ${getUptime()}`))
 
 console.log()
 
 console.log(chalk.green(`Messages processed : ${messagesProcessed}`))
-
 console.log(chalk.green(`Downloads today    : ${downloadsToday}`))
 
 console.log(chalk.gray("────────────────────────"))
 
 console.log()
-
 console.log(chalk.green("YouTube Downloader"))
 console.log(chalk.green("Facebook Downloader"))
 console.log(chalk.green("Instagram Downloader"))
 console.log(chalk.green("TikTok Downloader"))
-
 console.log()
 
 }
@@ -170,6 +161,52 @@ ENABLE TYPING SYSTEM
 ========================= */
 
 wrapSendMessageGlobally(sock)
+
+/* =========================
+PAIRING LOGIN
+========================= */
+
+const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
+
+if(files.length === 0){
+
+let waNumber = process.env.WA_NUMBER
+
+if(!waNumber){
+
+const response = await inquirer.prompt([
+{
+type:"input",
+name:"waNumber",
+message:chalk.cyan("📱 Enter your WhatsApp number (country code, no +):"),
+validate:(input)=> /^\d+$/.test(input) ? true : "Invalid number"
+}
+])
+
+waNumber = response.waNumber
+
+}
+
+const code = await sock.requestPairingCode(waNumber)
+
+console.log()
+
+console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
+console.log(chalk.green.bold("   MAINUL-X BOT LOGIN"))
+console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
+console.log()
+
+console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
+
+const device = process.env.WA_NUMBER ? "Railway Server" : "Local / Termux"
+
+console.log(chalk.blue("Device       : "), device)
+
+console.log()
+console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
+console.log()
+
+}
 
 /* =========================
 CONNECTION EVENTS
@@ -241,53 +278,6 @@ console.log(err)
 
 })
 
-async function startBot(){
-
-/* =========================
-PAIRING LOGIN
-========================= */
-
-const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
-
-if(files.length === 0){
-
-let waNumber = process.env.WA_NUMBER
-
-if(!waNumber){
-
-const response = await inquirer.prompt([
-{
-type:"input",
-name:"waNumber",
-message:chalk.cyan("📱 Enter your WhatsApp number (country code, no +):"),
-validate:(input)=> /^\d+$/.test(input) ? true : "Invalid number"
-}
-])
-
-waNumber = response.waNumber
-
 }
 
-const code = await sock.requestPairingCode(waNumber)
-
-console.log()
-
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log(chalk.green.bold("   MAINUL-X BOT LOGIN"))
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log()
-
-console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
-
-const device = process.env.WA_NUMBER ? "Railway Server" : "Local / Termux"
-
-console.log(chalk.blue("Device       : "), device)
-
-console.log()
-console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
-console.log()
-
-}
-
-}
 startBot()
