@@ -348,6 +348,8 @@ return
 
 }
 
+
+}
 /* ===============================
 UNKNOWN COMMAND + ANTI SPAM
 ================================ */
@@ -383,8 +385,6 @@ text:"🚫 Command spam detected\nUser suspended for 3 seconds"
 })
 
 return
-}
-
 spamTracker.set(from,data)
 
 const suggestion = suggestCommand(lower)
@@ -402,14 +402,20 @@ return
 }
 
 }
-
+  
 /* ===============================
 AUTO MENU
 ================================ */
 
 if(text && !text.startsWith("!") && !detectPlatform(text)){
 
+const greetings = ["hi","hello","hey","assalamualaikum","menu","start","?"]
+
+if(greetings.includes(lower)){
+
 await sendDownloaderMenu(sock,from)
+
+}
 
 return
 
@@ -487,6 +493,22 @@ const text = `📜 MAINUL-X COMMAND LIST
 !restart → Restart bot
 !logs → Error logs
 !help → Command menu
+
+━━━━━━━━━━━━━━━━━━
+
+💡 Tip:
+You can send a video link directly
+without using commands.
+
+━━━━━━━━━━━━━━━━━━
+
+👨‍💻 Developer
+Md. Mainul Islam (MAINUL-X)
+
+🌐 GitHub
+https://github.com/M41NUL
+
+⚡ Powered by MAINUL-X
 `
 
 await sock.sendMessage(from,{text})
@@ -559,3 +581,4 @@ rows:[
 })
 
 }
+
