@@ -26,6 +26,7 @@ const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 const BOT_START_TIME = Date.now()
 
 const messageCache = new Set()
+const spamTracker = new Map()
 
 /* ===============================
 CACHE CLEANER (FAST RESPONSE)
@@ -356,6 +357,15 @@ UNKNOWN COMMAND + ANTI SPAM
 
 if(text && text.startsWith("!")){
 
+const validCommands = [
+"!yt","!fb","!ig","!tt",
+"!ping","!uptime","!stats","!system",
+"!alive","!runtime","!botinfo",
+"!owner","!dev","!repo",
+"!update","!restart","!logs",
+"!help","!menu"
+]
+
 if(!validCommands.includes(lower)){
 
 let data = spamTracker.get(from) || {count:0,blockedUntil:0}
@@ -373,7 +383,7 @@ return
 
 data.count++
 
-if(data.count>=3){
+if(data.count >= 3){
 
 data.blockedUntil = now + 3000
 data.count = 0
@@ -385,14 +395,12 @@ text:"🚫 Command spam detected\nUser suspended for 3 seconds"
 })
 
 return
-spamTracker.set(from,data)
+}
 
-const suggestion = suggestCommand(lower)
+spamTracker.set(from,data)
 
 await sock.sendMessage(from,{
 text:`❌ Unknown command
-
-Did you mean: *${suggestion}* ?
 
 Type *!help* to see command list`
 })
@@ -402,25 +410,6 @@ return
 }
 
 }
-  
-/* ===============================
-AUTO MENU
-================================ */
-
-if(text && !text.startsWith("!") && !detectPlatform(text)){
-
-const greetings = ["hi","hello","hey","assalamualaikum","menu","start","?"]
-
-if(greetings.includes(lower)){
-
-await sendDownloaderMenu(sock,from)
-
-}
-
-return
-
-}
-
 /* ===============================
 AUTO LINK DETECT
 ================================ */
@@ -581,4 +570,5 @@ rows:[
 })
 
 }
+
 
