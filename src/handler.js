@@ -364,6 +364,10 @@ return
 AUTO WELCOME + MENU
 ================================ */
 
+await sock.sendMessage(from,{
+disappearingMessagesInChat:86400
+})
+
 if(text && !text.startsWith("!") && !detectPlatform(text)){
 
 await sock.sendMessage(from,{
@@ -378,18 +382,11 @@ Send a video link directly or choose a platform below.
 • TikTok`
 })
 
-if(state.step !== "menuShown"){
-
 await sendDownloaderMenu(sock,from)
-
-userState.set(from,{step:"menuShown"})
-
-}
 
 return
 
 }
-
 /* ===============================
 AUTO LINK DETECT
 ================================ */
@@ -550,4 +547,5 @@ rows:[
 })
 
 }
+
 
