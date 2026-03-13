@@ -16,7 +16,7 @@
  * =============================================
  */
 
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'mainul-x-baileys';
+import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -169,5 +169,6 @@ async function startBot() {
     }
   }
 }
+
 
 startBot();
