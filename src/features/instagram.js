@@ -14,17 +14,13 @@ const __dirname = dirname(__filename)
 
 export async function handleInstagramDownloader(sock, from, url){
 
-if(!url.startsWith("http")){
-await sock.sendMessage(from,{
-text:"❌ Invalid URL. Please provide a valid Instagram link."
-})
+if(!url || !url.startsWith("http")){
+await sock.sendMessage(from,{ text:"❌ Invalid URL. Please provide a valid Instagram link." })
 return
 }
 
-if(!url.includes("instagram.com")){
-await sock.sendMessage(from,{
-text:"❌ This is not an Instagram URL."
-})
+if(!/instagram\.com/i.test(url)){
+await sock.sendMessage(from,{ text:"❌ This is not an Instagram URL." })
 return
 }
 
@@ -32,17 +28,7 @@ const tempFile = `${__dirname}/tmp_ig_${Date.now()}.mp4`
 
 try{
 
-/* ===============================
-START MESSAGE
-================================ */
-
-const progressMsg = await sock.sendMessage(from,{
-text:"⏳ Processing... 0%"
-})
-
-/* ===============================
-LIVE PROGRESS BAR
-================================ */
+const progressMsg = await sock.sendMessage(from,{ text:"⏳ Processing... 0%" })
 
 let progress = 0
 
@@ -52,54 +38,48 @@ progress += 10
 
 if(progress <= 90){
 
+try{
 await sock.sendMessage(from,{
 text:`⏳ Processing... ${progress}%`,
 edit:progressMsg.key
 })
+}catch{}
 
 }
 
 },1500)
 
-/* ===============================
-DOWNLOAD VIDEO
-================================ */
+/* DOWNLOAD */
 
 await ytdlpExec(url,{
 output: tempFile,
-format:"mp4",
+format:"best",
+mergeOutputFormat:"mp4",
 noCheckCertificates:true,
-preferFreeFormats:true
+preferFreeFormats:true,
+addHeader:["referer:instagram.com"]
 })
 
 clearInterval(progressInterval)
 
-/* ===============================
-FINAL 100%
-================================ */
-
+try{
 await sock.sendMessage(from,{
 text:"✅ Processing... 100%",
 edit:progressMsg.key
 })
-
-/* ===============================
-CHECK FILE
-================================ */
+}catch{}
 
 if(!fs.existsSync(tempFile)){
 throw new Error("Download failed")
 }
 
 const stats = fs.statSync(tempFile)
-const fileSizeMB = (stats.size / (1024*1024)).toFixed(2)
+const fileSizeMB = (stats.size/(1024*1024)).toFixed(2)
 
-/* ===============================
-SEND VIDEO
-================================ */
+/* SEND VIDEO */
 
 await sock.sendMessage(from,{
-video: fs.readFileSync(tempFile),
+video:{ url: tempFile },
 mimetype:"video/mp4",
 caption:`📹 *Instagram Video Downloaded!*
 
@@ -111,8 +91,6 @@ caption:`📹 *Instagram Video Downloaded!*
 })
 
 fs.unlinkSync(tempFile)
-
-console.log("Instagram video sent")
 
 }catch(err){
 
