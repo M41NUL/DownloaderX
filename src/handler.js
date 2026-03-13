@@ -22,6 +22,7 @@ import { handleTikTokDownloader } from './features/tiktok.js';
 import { validateUrl, detectPlatform } from './utils/validateUrl.js';
 
 const menuImagePath = path.join(process.cwd(), 'src/assets/menu.jpg');
+const BOT_START_TIME = Date.now();
 
 /**
  * Main message handler function
@@ -40,6 +41,34 @@ export async function handler(sock, msg) {
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption;
+
+  // ==================== COMMANDS SECTION ====================
+  
+  // 📊 PING COMMAND
+  if (text?.toLowerCase() === '!ping' || text?.toLowerCase() === 'ping') {
+    const start = Date.now();
+    await sock.sendMessage(from, { text: '🏓 Pinging...' });
+    const end = Date.now();
+    await sock.sendMessage(from, { 
+      text: `⚡ *Pong!*\n📶 Response Time: *${end - start}ms*` 
+    });
+    return;
+  }
+
+  // ⏱️ UPTIME COMMAND
+  if (text?.toLowerCase() === '!uptime' || text?.toLowerCase() === 'uptime') {
+    const uptime = Math.floor((Date.now() - BOT_START_TIME) / 1000);
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = uptime % 60;
+    
+    await sock.sendMessage(from, { 
+      text: `⏱ *Bot Uptime*\n━━━━━━━━━━━━━━\n📆 ${hours}h ${minutes}m ${seconds}s\n🕒 Since: ${new Date(BOT_START_TIME).toLocaleString()}` 
+    });
+    return;
+  }
+
+  // ==========================================================
 
   // Handle interactive button responses
   let rowId;
@@ -91,6 +120,32 @@ export async function handler(sock, msg) {
 
   // Handle text messages (URL inputs)
   if (text) {
+    // ==================== AUTO LINK DETECT ====================
+    // Detect if it's a direct link without command
+    const platform = detectPlatform(text);
+    if (platform) {
+      let downloaderHandler;
+      switch (platform) {
+        case 'youtube':
+          downloaderHandler = handleYouTubeDownloader;
+          break;
+        case 'facebook':
+          downloaderHandler = handleFacebookDownloader;
+          break;
+        case 'instagram':
+          downloaderHandler = handleInstagramDownloader;
+          break;
+        case 'tiktok':
+          downloaderHandler = handleTikTokDownloader;
+          break;
+      }
+      
+      await downloaderHandler(sock, from, text);
+      userState.set(from, { step: 'menuMain' });
+      return;
+    }
+    // ==========================================================
+
     switch (state.step) {
       case 'yt_wait_url':
         if (!validateUrl(text, 'youtube')) {
@@ -219,6 +274,10 @@ async function sendTextMenu(sock, from) {
 📘 *Facebook Downloader* - Type: fb <url>
 📸 *Instagram Downloader* - Type: ig <url>
 🎵 *TikTok Downloader* - Type: tt <url>
+━━━━━━━━━━━━━━━━━━━━━
+⚡ *Commands*
+• !ping - Check response time
+• !uptime - Bot uptime
 ━━━━━━━━━━━━━━━━━━━━━
 ⚡ Powered by MAINUL-X`;
 
