@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 /**
  * =============================================
- *        MAINUL-X WhatsApp Downloader Bot
- * =============================================
- * Author : Md. Mainul Islam (MAINUL-X)
- * GitHub : https://github.com/M41NUL
- * Project: DownloaderX - Multi Platform Video Downloader
+ * MAINUL - X DOWNLOADER BOT
+ * Railway Production Version
  * =============================================
  */
 
@@ -13,96 +10,30 @@ import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-b
 import pino from "pino"
 import fs from "fs"
 import path from "path"
-import chalk from "chalk"
-import figlet from "figlet"
-import os from "os"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
 import { WA_NUMBER } from "./config/number.js"
 
+/* =========================
+CRASH PROTECTION
+========================= */
+
+process.on("uncaughtException",(err)=>{
+console.log("CRASH:",err)
+})
+
+process.on("unhandledRejection",(err)=>{
+console.log("PROMISE ERROR:",err)
+})
+
+/* =========================
+SESSION PATH
+========================= */
+
 const authDir = path.join(process.cwd(),"session")
 
 let messagesProcessed = 0
-let downloadsToday = 0
-const startTime = Date.now()
-
-/* =========================
-BANNER
-========================= */
-
-function showBanner(){
-
-const banner = figlet.textSync("M X-D L BOT",{font:"Big"})
-console.log(banner)
-
-}
-
-/* =========================
-SYSTEM STATS
-========================= */
-
-function getUptime(){
-
-const sec = Math.floor((Date.now()-startTime)/1000)
-const h = Math.floor(sec/3600)
-const m = Math.floor((sec%3600)/60)
-
-return `${h}h ${m}m`
-
-}
-
-function getMemory(){
-
-return Math.round(process.memoryUsage().rss/1024/1024)
-
-}
-
-function getCPU(){
-
-const cpus = os.cpus()
-
-let idle = 0
-let total = 0
-
-for (const cpu of cpus){
-
-for (const type in cpu.times){
-
-total += cpu.times[type]
-
-}
-
-idle += cpu.times.idle
-
-}
-
-return 100 - Math.round(100 * idle / total)
-
-}
-
-/* =========================
-STATUS DASHBOARD
-========================= */
-
-function showStatus(sock){
-
-console.log("────────────────────────")
-
-console.log("Status  : Connected")
-console.log("User    :",sock.user?.id)
-console.log("Memory  :",getMemory(),"MB")
-console.log("CPU     :",getCPU(),"%")
-console.log("Uptime  :",getUptime())
-
-console.log()
-
-console.log("Messages processed :",messagesProcessed)
-console.log("Downloads today    :",downloadsToday)
-
-console.log("────────────────────────")
-
-}
 
 /* =========================
 START BOT
@@ -110,13 +41,15 @@ START BOT
 
 async function startBot(){
 
-showBanner()
+console.log("🚀 Starting MAINUL - X DOWNLOADER BOT")
 
 if(!fs.existsSync(authDir)){
-
 fs.mkdirSync(authDir)
-
 }
+
+/* =========================
+AUTH STATE
+========================= */
 
 const { state, saveCreds } = await useMultiFileAuthState(authDir)
 
@@ -144,21 +77,8 @@ try{
 const code = await sock.requestPairingCode(WA_NUMBER)
 
 console.log("")
-
-console.log("━━━━━━━━━━━━━━━━━━")
-console.log("   MAINUL-X BOT LOGIN")
-console.log("━━━━━━━━━━━━━━━━━━")
-
-console.log("")
-
-console.log("Pairing Code :",code)
-
-console.log("Device       : Railway Server")
-
-console.log("")
-
-console.log("Open WhatsApp → Linked Devices → Link Device")
-
+console.log("🔐 Pairing Code :",code)
+console.log("📱 Open WhatsApp → Linked Devices → Link Device")
 console.log("")
 
 }catch(err){
@@ -179,10 +99,16 @@ sock.ev.on("connection.update",(update)=>{
 
 const { connection, lastDisconnect } = update
 
+if(connection === "connecting"){
+
+console.log("🔄 Connecting to WhatsApp...")
+
+}
+
 if(connection === "open"){
 
-showBanner()
-showStatus(sock)
+console.log("✅ Bot Connected Successfully")
+console.log("🤖 MAINUL - X DOWNLOADER BOT Running")
 
 }
 
@@ -193,7 +119,7 @@ lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
 
 if(shouldReconnect){
 
-console.log("Reconnecting...")
+console.log("⚠ Connection closed, reconnecting...")
 
 setTimeout(()=>{
 
@@ -203,7 +129,7 @@ startBot()
 
 }else{
 
-console.log("Session logged out")
+console.log("❌ Session logged out")
 
 }
 
@@ -236,8 +162,7 @@ await handler(sock,msg)
 
 }catch(err){
 
-console.log("Handler Error")
-console.log(err)
+console.log("Handler Error:",err)
 
 }
 
