@@ -22,6 +22,10 @@ import { handleTikTokDownloader } from "./features/tiktok.js"
 import { validateUrl, detectPlatform } from "./utils/validateUrl.js"
 
 const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
+const youtubeImage = path.join(process.cwd(),"src/assets/youtube.png")
+const facebookImage = path.join(process.cwd(),"src/assets/facebook.png")
+const instagramImage = path.join(process.cwd(),"src/assets/instagram.png")
+const tiktokImage = path.join(process.cwd(),"src/assets/tiktok.png")
 
 const BOT_START_TIME = Date.now()
 
@@ -371,7 +375,7 @@ disappearingMessagesInChat:86400
 if(text && !text.startsWith("!") && !detectPlatform(text)){
 
 await sock.sendMessage(from,{
-text:`👋 Welcome to *MAINUL-X Downloader Bot*
+text:`👋 Welcome to *MAINUL - X DOWNLOADER BOT*
 
 Send a video link directly or choose a platform below.
 
@@ -379,7 +383,11 @@ Send a video link directly or choose a platform below.
 • YouTube
 • Facebook
 • Instagram
-• TikTok`
+• TikTok
+
+💡 Commands
+Type *!help* to see all bot commands
+`
 })
 
 await sendDownloaderMenu(sock,from)
@@ -392,6 +400,66 @@ AUTO LINK DETECT
 ================================ */
 
 if(text){
+
+/* ---- YOUTUBE SHORTS ---- */
+
+const ytShorts = /youtube\.com\/shorts\//i
+
+if(ytShorts.test(text)){
+
+await handleYouTubeDownloader(sock,from,text)
+
+return
+
+}
+
+/* ---- YOUTUBE FIX ---- */
+
+const ytRegex = /(youtube\.com|youtu\.be)/i
+
+if(ytRegex.test(text)){
+
+await handleYouTubeDownloader(sock,from,text)
+
+return
+
+}
+
+/* ---- INSTAGRAM REEL ---- */
+
+const igReel = /instagram\.com\/reel\//i
+
+if(igReel.test(text)){
+
+await handleInstagramDownloader(sock,from,text)
+
+return
+
+}
+
+/* ---- FACEBOOK REEL ---- */
+
+const fbReel = /facebook\.com\/reel\//i
+
+if(fbReel.test(text)){
+
+await handleFacebookDownloader(sock,from,text)
+
+return
+
+}
+
+/* ---- TIKTOK VIDEO ---- */
+
+const ttVideo = /tiktok\.com\/.*\/video\//i
+
+if(ttVideo.test(text)){
+
+await handleTikTokDownloader(sock,from,text)
+
+return
+
+}
 
 const platform = detectPlatform(text)
 
@@ -426,7 +494,7 @@ return
 }
 
 }
-
+  
 }
 
 /* ===============================
@@ -435,7 +503,7 @@ COMMAND LIST
 
 async function sendCommandList(sock,from){
 
-const text = `📜 MAINUL-X COMMAND LIST
+const text = `📜 MAINUL - X DOWNLOADER BOT COMMAND LIST
 
 !yt → Download YouTube video
 !fb → Download Facebook video
@@ -497,6 +565,8 @@ Choose a platform`,
 
 footer:"MAINUL-X SYSTEM",
 
+headerType:4,
+
 interactiveButtons:[
 
 {
@@ -547,5 +617,3 @@ rows:[
 })
 
 }
-
-
