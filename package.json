@@ -8,15 +8,6 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": [
-    "whatsapp-bot",
-    "video-downloader",
-    "youtube-downloader",
-    "facebook-downloader",
-    "instagram-downloader",
-    "tiktok-downloader",
-    "media-downloader"
-  ],
   "author": "MAINUL-X",
   "license": "MIT",
   "dependencies": {
