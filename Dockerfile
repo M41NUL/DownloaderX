@@ -1,18 +1,21 @@
 FROM node:20
 
-# install python + ffmpeg
+# Install python + ffmpeg (yt-dlp এর জন্য দরকার)
 RUN apt-get update && apt-get install -y \
 python3 \
 python3-pip \
 ffmpeg \
-curl
+curl \
+&& ln -s /usr/bin/python3 /usr/bin/python
 
 WORKDIR /app
 
+# Install node packages
 COPY package*.json ./
-
 RUN npm install
 
+# Copy project
 COPY . .
 
-CMD ["node","index.js"]
+# Start bot
+CMD ["node", "index.js"]
