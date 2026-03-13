@@ -7,8 +7,7 @@
 
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
-    "postinstall": "apt-get update && apt-get install -y python3"
+    "dev": "node index.js"
   },
 
   "keywords": [
