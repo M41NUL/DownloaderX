@@ -1,233 +1,29 @@
 #!/usr/bin/env node
+
 /**
  * =============================================
- *        MAINUL-X WhatsApp Downloader Bot
+ *        MAINUL-X Downloader Bot Loader
  * =============================================
- * Author : Md. Mainul Islam (MAINUL-X)
- * GitHub : https://github.com/M41NUL
- * Project: DownloaderX - Multi Platform Video Downloader
+ * Auto detect environment
+ * Termux / Railway / Server
  * =============================================
  */
 
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
-import pino from "pino"
-import fs from "fs"
-import path from "path"
-import chalk from "chalk"
-import figlet from "figlet"
-import os from "os"
+const isRailway =
+process.env.RAILWAY_STATIC_URL ||
+process.env.RAILWAY_ENVIRONMENT ||
+process.env.RAILWAY_PROJECT_ID
 
-import { handler } from "./src/handler.js"
-import { wrapSendMessageGlobally } from "./src/utils/typing.js"
-import { WA_NUMBER } from "./config/number.js"
+if(isRailway){
 
-const authDir = path.join(process.cwd(), "session")
+console.log("🚀 Running Railway Mode...\n")
 
-let messagesProcessed = 0
-let downloadsToday = 0
-const startTime = Date.now()
-
-/* =========================
-CLEAR TERMINAL
-========================= */
-
-function clearScreen(){
-console.clear()
-process.stdout.write("\x1Bc")
-}
-
-/* =========================
-BANNER
-========================= */
-
-function showBanner(){
-clearScreen()
-const banner = figlet.textSync("M X-D L BOT",{font:"Big"})
-console.log(chalk.cyan(banner))
-}
-
-/* =========================
-SYSTEM STATS
-========================= */
-
-function getUptime(){
-const sec = Math.floor((Date.now()-startTime)/1000)
-const h = Math.floor(sec/3600)
-const m = Math.floor((sec%3600)/60)
-return `${h}h ${m}m`
-}
-
-function getCPU(){
-const cpus = os.cpus()
-let idle = 0
-let total = 0
-
-for (const cpu of cpus) {
-for (const type in cpu.times) {
-total += cpu.times[type]
-}
-idle += cpu.times.idle
-}
-
-return 100 - Math.round(100 * idle / total)
-}
-
-function getMemory(){
-return Math.round(process.memoryUsage().rss/1024/1024)
-}
-
-/* =========================
-STATUS DASHBOARD
-========================= */
-
-function showStatus(sock){
-
-console.log(chalk.gray("────────────────────────"))
-
-console.log(chalk.green("Status  : Connected"))
-console.log(chalk.cyan(`User    : ${sock.user?.id}`))
-console.log(chalk.yellow(`Memory  : ${getMemory()} MB`))
-console.log(chalk.magenta(`CPU     : ${getCPU()} %`))
-console.log(chalk.blue(`Uptime  : ${getUptime()}`))
-
-console.log()
-
-console.log(chalk.green(`Messages processed : ${messagesProcessed}`))
-console.log(chalk.green(`Downloads today    : ${downloadsToday}`))
-
-console.log(chalk.gray("────────────────────────"))
-
-console.log()
-console.log(chalk.green("YouTube Downloader"))
-console.log(chalk.green("Facebook Downloader"))
-console.log(chalk.green("Instagram Downloader"))
-console.log(chalk.green("TikTok Downloader"))
-console.log()
-}
-
-/* =========================
-START BOT
-========================= */
-
-async function startBot(){
-
-showBanner()
-
-if(!fs.existsSync(authDir)){
-fs.mkdirSync(authDir)
-}
-
-const { state, saveCreds } = await useMultiFileAuthState(authDir)
-
-const sock = makeWASocket({
-auth: state,
-logger: pino({level:"silent"})
-})
-
-wrapSendMessageGlobally(sock)
-
-/* =========================
-PAIRING LOGIN
-========================= */
-
-const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
-
-if(files.length === 0){
-
-setTimeout(async ()=>{
-
-try{
-
-const code = await sock.requestPairingCode(WA_NUMBER)
-
-console.log()
-
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log(chalk.green.bold("   MAINUL-X BOT LOGIN"))
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log()
-
-console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
-console.log(chalk.blue("Device       : Railway / Termux"))
-
-console.log()
-console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
-console.log()
-
-}catch(err){
-console.log("Pairing error:", err.message)
-}
-
-},4000)
-
-}
-
-/* =========================
-CONNECTION EVENTS
-========================= */
-
-sock.ev.on("connection.update",(update)=>{
-
-const { connection, lastDisconnect } = update
-
-if(connection === "open"){
-
-showBanner()
-showStatus(sock)
-
-}
-
-if(connection === "close"){
-
-const shouldReconnect =
-lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
-
-if(shouldReconnect){
-
-console.log(chalk.yellow("Reconnecting..."))
-
-setTimeout(()=>{
-startBot()
-},3000)
+import("./index.railway.js")
 
 }else{
 
-console.log(chalk.red("Session logged out"))
+console.log("📱 Running Termux Mode...\n")
+
+import("./index.termux.js")
 
 }
-
-}
-
-})
-
-/* =========================
-SAVE CREDS
-========================= */
-
-sock.ev.on("creds.update",saveCreds)
-
-/* =========================
-MESSAGE LISTENER
-========================= */
-
-sock.ev.on("messages.upsert",async(m)=>{
-
-const msg = m.messages?.[0]
-
-if(!msg) return
-if(msg.key.fromMe) return
-
-messagesProcessed++
-
-try{
-await handler(sock,msg)
-}catch(err){
-console.log(chalk.red("Handler Error"))
-console.log(err)
-}
-
-})
-
-}
-
-startBot()
