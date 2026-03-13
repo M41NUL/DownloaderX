@@ -1,197 +1,312 @@
 #!/usr/bin/env node
+
 /**
  * =============================================
  *      MAINUL-X WhatsApp Media Downloader
  * =============================================
  * Author: Md. Mainul Islam (MAINUL-X)
  * GitHub: https://github.com/M41NUL
- * Version: 1.0.0
+ * Telegram: @mdmainulislaminfo
+ * Email: githubmainul@gmail.com
  * =============================================
  */
 
-process.stdout.write("\x1Bc");
-
-import { setMaxListeners } from 'events';
-setMaxListeners(50);
-
-// লাইন ১৪-১৫ এটা দিয়ে replace করুন
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from 'atexovi-baileys';
+import { makeWASocket, useMultiFileAuthState, DisconnectReason } from 'atexovi-baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import qrcode from 'qrcode-terminal';
-import { fileURLToPath } from 'url';
-
-// 👇 এই দুইটা import যোগ করুন
+import process from 'process';
+import dotenv from 'dotenv';
 import { handler } from './src/handler.js';
 import { wrapSendMessageGlobally } from './src/utils/typing.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const authDir = path.join(__dirname, 'session');
+dotenv.config({ debug: false });
 
-if (!fs.existsSync(authDir)) {
-  fs.mkdirSync(authDir, { recursive: true });
+const originalError = console.error;
+const originalLog = console.log;
+const originalStdoutWrite = process.stdout.write;
+
+/* ===============================
+   CLEAN LOG FILTER SYSTEM
+================================ */
+
+const FILTER_PATTERNS = [
+  'Bad MAC',
+  'Failed to decrypt message with any known session',
+  'Session error:',
+  'Failed to decrypt',
+  'Closing open session',
+  'Closing session:',
+  'SessionEntry',
+  '_chains:',
+  'registrationId:',
+  'currentRatchet:',
+  'indexInfo:',
+  '<Buffer',
+  'pubKey:',
+  'privKey:',
+  'baseKey:',
+  'remoteIdentityKey:',
+  'lastRemoteEphemeralKey:',
+  'ephemeralKeyPair:',
+  'chainKey:',
+  'chainType:',
+  'messageKeys:'
+];
+
+process.stdout.write = function(chunk, encoding, callback) {
+
+  const str = chunk?.toString() || '';
+  const shouldFilter = FILTER_PATTERNS.some(pattern => str.includes(pattern));
+
+  if (shouldFilter) {
+
+    if (str.includes('Closing open session')) {
+      const cleanMsg = chalk.blue('🔒 Signal encryption updated\n');
+      return originalStdoutWrite.call(this, Buffer.from(cleanMsg), encoding, callback);
+    }
+
+    if (typeof callback === 'function') callback();
+    return true;
+  }
+
+  return originalStdoutWrite.call(this, chunk, encoding, callback);
+};
+
+console.error = function(...args) {
+
+  const msg = args.join(' ');
+
+  if (FILTER_PATTERNS.some(pattern => msg.includes(pattern))) {
+
+    if (msg.includes('Bad MAC')) {
+      console.log(chalk.yellow('🔄 Signal protocol securing connection...'));
+    }
+
+    return;
+  }
+
+  originalError.apply(console, args);
+};
+
+console.log = function(...args) {
+
+  const msg = args.join(' ');
+
+  if (FILTER_PATTERNS.some(pattern => msg.includes(pattern))) {
+    return;
+  }
+
+  originalLog.apply(console, args);
+};
+
+/* ===============================
+   SESSION DIRECTORY
+================================ */
+
+const authDir = path.join(process.cwd(), 'session');
+
+/* ===============================
+   MAINUL-X ASCII BANNER
+================================ */
+
+const bannerAscii = `
+ __       __                  _______               __     
+/  |  _  /  |                /       \\             /  |    
+$$ | / \\ $$ |  ______        $$$$$$$  |  ______   _$$ |_   
+$$ |/$  \\$$ | /      \\       $$ |__$$ | /      \\ / $$   |  
+$$ /$$$  $$ | $$$$$$  |      $$    $$< /$$$$$$  |$$$$$$/   
+$$ $$/$$ $$ | /    $$ |      $$$$$$$  |$$ |  $$ |  $$ | __ 
+$$$$/  $$$$ |/$$$$$$$ |      $$ |__$$ |$$ \\__$$ |  $$ |/  |
+$$$/    $$$ |$$    $$ |      $$    $$/ $$    $$/   $$  $$/ 
+$$/      $$/  $$$$$$$/       $$$$$$$/   $$$$$$/     $$$$/  
+`;
+
+const features = [
+  '▷ YouTube Downloader',
+  'ⓕ Facebook Downloader',
+  '🅾 Instagram Downloader',
+  '★ TikTok Downloader',
+];
+
+/* ===============================
+   SHOW TERMINAL BANNER
+================================ */
+
+export function showBanner() {
+
+  console.clear();
+
+  const termWidth = process.stdout.columns || 80;
+
+  bannerAscii.split('\n').forEach(line => {
+
+    const padding = Math.max(0, Math.floor((termWidth - line.length) / 2));
+    console.log(' '.repeat(padding) + chalk.cyanBright(line));
+
+  });
+
+  console.log();
+
+  features.forEach(f => {
+
+    const padding = Math.max(0, Math.floor((termWidth - f.length) / 2));
+    console.log(' '.repeat(padding) + chalk.greenBright(f));
+
+  });
+
+  console.log();
+
+  const dev = "Developer: MAINUL-X";
+  const git = "GitHub: https://github.com/M41NUL";
+
+  console.log(chalk.gray(dev));
+  console.log(chalk.gray(git));
+  console.log();
 }
 
-// Banner
-console.log(chalk.yellow('╔══════════════════════════════════════════╗'));
-console.log(chalk.yellow('║') + chalk.green('   WhatsApp Media Downloader Bot v1.0') + chalk.yellow('   ║'));
-console.log(chalk.yellow('║') + chalk.blue('        Created by MAINUL-X 🇧🇩') + chalk.yellow('         ║'));
-console.log(chalk.yellow('╚══════════════════════════════════════════╝\n'));
-
-let sock = null;
-let reconnectTimer = null;
+/* ===============================
+   START BOT
+================================ */
 
 async function startBot() {
-  try {
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
+
+  showBanner();
+
+  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+
+  const sock = makeWASocket({
+    auth: state,
+    logger: pino({ level: 'silent' }),
+  });
+
+  wrapSendMessageGlobally(sock);
+
+/* ===============================
+   CONNECTION EVENTS
+================================ */
+
+  sock.ev.on('connection.update', async (update) => {
+
+    const { connection, lastDisconnect } = update;
+
+    if (connection === 'open') {
+
+      console.log(chalk.greenBright('✅ Connected to WhatsApp successfully!'));
+      console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
+      console.log(chalk.magenta('⚡ MAINUL-X Bot is ready!\n'));
+
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    else if (connection === 'close') {
 
-    sock = makeWASocket({
-      auth: state,
-      logger: pino({ level: 'silent' }),
-      printQRInTerminal: false,
-      browser: ['MAINUL-X', 'Chrome', '1.0.0'],
-      syncFullHistory: false,
-      markOnlineOnConnect: false,
-      connectTimeoutMs: 60000
-    });
+      const reason = lastDisconnect?.error?.output?.statusCode;
 
-    // 👇 typing.js wrapper যোগ করুন
-    wrapSendMessageGlobally(sock);
+      const shouldReconnect = reason !== DisconnectReason.loggedOut;
 
-    const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
-    const hasSession = files.length > 0;
+      if (shouldReconnect) {
 
-    if (hasSession) {
-      console.log(chalk.green('✅ Existing session found. Connecting...\n'));
+        console.log(chalk.yellow('🔁 Connection lost, reconnecting...\n'));
+        startBot();
+
+      }
+
+      else {
+
+        console.log(chalk.red('❌ Session invalid.'));
+        console.log(chalk.red('Delete the session folder and login again.\n'));
+
+      }
+
     }
 
-    sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-      
-      if (qr && !hasSession) {
-        console.log(chalk.yellow('\n📱 Scan this QR code with WhatsApp:\n'));
-        qrcode.generate(qr, { small: true });
-      }
-      
-      if (connection === 'open') {
-        console.log(chalk.green('\n✅ Connected to WhatsApp successfully!'));
-        console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
-        console.log(chalk.magenta('⚡ Bot is ready! Send any video link.\n'));
-      }
-      
-      if (connection === 'close') {
-        const statusCode = lastDisconnect?.error?.output?.statusCode;
-        
-        console.log(chalk.red(`\n❌ Disconnected (Code: ${statusCode})`));
-        
-        if (statusCode === 405) {
-          console.log(chalk.yellow('⏳ Waiting 30 seconds before reconnect...\n'));
-          reconnectTimer = setTimeout(() => {
-            console.log(chalk.cyan('🔄 Attempting to reconnect...\n'));
-            startBot();
-          }, 30000);
-        } else if (statusCode === 401) {
-          console.log(chalk.red('❌ Logged out. Delete session folder and restart.\n'));
-          fs.rmSync(authDir, { recursive: true, force: true });
-        } else {
-          console.log(chalk.yellow('🔄 Reconnecting in 10 seconds...\n'));
-          reconnectTimer = setTimeout(() => {
-            startBot();
-          }, 10000);
-        }
-      }
-    });
+  });
 
-    sock.ev.on('creds.update', saveCreds);
+/* ===============================
+   SAVE CREDS
+================================ */
 
-    // 👇 message handler যোগ করুন
-    sock.ev.on('messages.upsert', async (m) => {
-      const msg = m.messages?.[0];
-      if (!msg || msg.key.fromMe) return;
+  sock.ev.on('creds.update', saveCreds);
 
-      try {
-        await handler(sock, msg);
-      } catch (err) {
-        console.error(chalk.red('[Handler Error]'), err);
-      }
-    });
+/* ===============================
+   MESSAGE LISTENER
+================================ */
 
-    if (!hasSession) {
-      await showLoginMenu(sock);
-    }
+  sock.ev.on('messages.upsert', async (m) => {
 
-  } catch (err) {
-    console.error(chalk.red('\n❌ Fatal error:'), err.message);
-    reconnectTimer = setTimeout(() => {
-      startBot();
-    }, 10000);
-  }
-}
+    const msg = m.messages?.[0];
 
-async function showLoginMenu(sock) {
-  console.log(chalk.cyan('\n📋 LOGIN METHOD'));
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━'));
-  console.log('  [1] 📱 QR Code');
-  console.log('  [2] 🔢 Pairing Code');
-  console.log('  [3] ℹ️  Info');
-  console.log('  [4] 🚪 Exit');
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━\n'));
+    if (!msg || msg.key.fromMe) return;
 
-  const { choice } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'choice',
-      message: 'Enter choice (1-4):',
-      validate: (input) => /^[1-4]$/.test(input)
-    }
-  ]);
-
-  if (choice === '1') {
-    console.log(chalk.green('\n✅ QR Code selected. Waiting...\n'));
-  }
-  else if (choice === '2') {
-    const { number } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'number',
-        message: 'Enter WhatsApp number (Ex: 88017...):',
-        validate: (input) => /^\d{10,}$/.test(input.replace(/\D/g, ''))
-      }
-    ]);
-    
     try {
-      console.log(chalk.yellow('\n⏳ Getting pairing code...'));
-      const code = await sock.requestPairingCode(number.replace(/\D/g, ''));
-      console.log(chalk.greenBright('\n✅ Pairing Code:'), chalk.bold.magenta(code));
-    } catch {
-      console.log(chalk.red('\n❌ Failed. Use QR code.'));
-      await showLoginMenu(sock);
-    }
-  }
-  else if (choice === '3') {
-    console.log(chalk.cyan('\n👑 MAINUL-X v1.0 🇧🇩\n'));
-    await showLoginMenu(sock);
-  }
-  else {
-    console.log(chalk.yellow('\n👋 Bye!\n'));
-    process.exit(0);
-  }
-}
 
-process.on('SIGINT', () => {
-  console.log(chalk.yellow('\n\n👋 Shutting down...\n'));
-  if (sock) sock.end();
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  process.exit(0);
-});
+      await handler(sock, msg);
+
+    }
+
+    catch (err) {
+
+      console.error(chalk.red('[Handler Error]'), err);
+
+    }
+
+  });
+
+/* ===============================
+   PAIRING CODE LOGIN
+================================ */
+
+  const files = fs.readdirSync(authDir).filter(f => f.endsWith('.json'));
+
+  if (files.length === 0) {
+
+    let waNumber;
+
+    try {
+
+      const response = await inquirer.prompt([
+
+        {
+          type: 'input',
+          name: 'waNumber',
+          message: chalk.cyanBright('📱 Enter your WhatsApp number (country code, no +):'),
+          validate: (input) => /^\d{8,}$/.test(input) ? true : 'Invalid phone number'
+        },
+
+      ]);
+
+      waNumber = response.waNumber;
+
+    }
+
+    catch (err) {
+
+      if (err.name === 'ExitPromptError') process.exit(0);
+      else throw err;
+
+    }
+
+    try {
+
+      const code = await sock.requestPairingCode(waNumber);
+
+      console.log(chalk.greenBright('\n✅ Pairing Code Generated!'));
+      console.log(chalk.yellowBright('📌 Your Code:'), chalk.bold.magenta(code));
+      console.log(chalk.cyan('Open WhatsApp → Linked Devices → Link a Device'));
+      console.log(chalk.greenBright('\nWaiting for connection...\n'));
+
+    }
+
+    catch (error) {
+
+      console.error(chalk.red('❌ Error requesting pairing code:'), error);
+
+    }
+
+  }
+
+}
 
 startBot();
-
