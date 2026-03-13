@@ -5,7 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # WhatsApp session folder
-session/
+# session/
 *.session
 auth_info*.json
 session.data
