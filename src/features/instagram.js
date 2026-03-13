@@ -1,125 +1,131 @@
 /**
  * =============================================
- *      MAINUL-X WhatsApp Media Downloader
- * =============================================
- * Author: Md. Mainul Islam (MAINUL-X)
- * GitHub: https://github.com/M41NUL
- * Telegram: @mdmainulislaminfo
- * Email: githubmainul@gmail.com
- * =============================================
- * Feature: Instagram Video/Reels Downloader with Progress Bar
+ * MAINUL-X Instagram Video/Reels Downloader
  * =============================================
  */
 
-import fs from 'fs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import ytdlpExec from 'yt-dlp-exec';
+import fs from "fs"
+import { dirname } from "path"
+import { fileURLToPath } from "url"
+import ytdlpExec from "yt-dlp-exec"
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-/**
- * Instagram video/reels downloader function with progress bar
- * @param {Object} sock - WhatsApp socket connection
- * @param {String} from - Sender's chat ID
- * @param {String} url - Instagram video/reels URL
- */
-export async function handleInstagramDownloader(sock, from, url) {
-  // URL validation
-  if (!url.startsWith('http')) {
-    await sock.sendMessage(from, { text: '❌ Invalid URL. Please provide a valid Instagram video/reels link.' });
-    return;
-  }
+export async function handleInstagramDownloader(sock, from, url){
 
-  // Check if it's Instagram URL
-  if (!url.includes('instagram.com')) {
-    await sock.sendMessage(from, { text: '❌ This is not an Instagram URL. Please provide a valid Instagram link.' });
-    return;
-  }
+if(!url.startsWith("http")){
+await sock.sendMessage(from,{
+text:"❌ Invalid URL. Please provide a valid Instagram link."
+})
+return
+}
 
-  // Send initial message
-  await sock.sendMessage(from, { text: '⏳ Initializing Instagram download...' });
+if(!url.includes("instagram.com")){
+await sock.sendMessage(from,{
+text:"❌ This is not an Instagram URL."
+})
+return
+}
 
-  const tempFile = `${__dirname}/tmp_ig_${Date.now()}.mp4`;
+const tempFile = `${__dirname}/tmp_ig_${Date.now()}.mp4`
 
-  try {
-    // Get video info
-    await sock.sendMessage(from, { text: '🔍 Fetching Instagram content...' });
+try{
 
-    // Determine content type (video or reels)
-    const isReels = url.includes('/reel/') || url.includes('/reels/');
-    const contentType = isReels ? 'Reels' : 'Post';
+/* ===============================
+START MESSAGE
+================================ */
 
-    // Progress tracking
-    let lastProgress = 0;
-    const progressInterval = setInterval(async () => {
-      if (lastProgress < 100) {
-        const progressMsg = [
-          '⏳ Downloading... 0%',
-          '🔄 25% downloaded',
-          '📥 50% downloaded',
-          '📦 75% downloaded',
-          '✅ 100% complete'
-        ][Math.floor(lastProgress / 25)];
-        
-        if (lastProgress % 25 === 0 && lastProgress < 100) {
-          await sock.sendMessage(from, { text: progressMsg });
-        }
-        lastProgress += 25;
-      }
-    }, 2000);
+const progressMsg = await sock.sendMessage(from,{
+text:"⏳ Processing... 0%"
+})
 
-    // Download video using yt-dlp
-    await ytdlpExec(url, { 
-      output: tempFile, 
-      format: 'mp4',
-      noCheckCertificates: true,
-      preferFreeFormats: true
-    });
+/* ===============================
+LIVE PROGRESS BAR
+================================ */
 
-    clearInterval(progressInterval);
-    await sock.sendMessage(from, { text: '✅ Download complete! Now sending video...' });
+let progress = 0
 
-    // Check if file exists
-    if (!fs.existsSync(tempFile)) {
-      throw new Error('Download failed - file not created');
-    }
+const progressInterval = setInterval(async()=>{
 
-    // Get file size
-    const stats = fs.statSync(tempFile);
-    const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+progress += 10
 
-    // Send video to WhatsApp
-    await sock.sendMessage(from, {
-      video: fs.readFileSync(tempFile),
-      mimetype: 'video/mp4',
-      caption: `📹 *Instagram ${contentType} Downloaded!*\n━━━━━━━━━━━━━━━━━━━━━\n📌 *Type:* ${contentType}\n📦 *Size:* ${fileSizeMB} MB\n🔗 *Source:* Instagram\n━━━━━━━━━━━━━━━━━━━━━\n⚡ Powered by MAINUL-X`
-    });
+if(progress <= 90){
 
-    // Clean up temp file
-    fs.unlinkSync(tempFile);
-    console.log(`✅ Instagram ${contentType} downloaded and sent: ${url}`);
+await sock.sendMessage(from,{
+text:`⏳ Processing... ${progress}%`,
+edit:progressMsg.key
+})
 
-  } catch (err) {
-    console.error('❌ Instagram Download Error:', err.message);
-    
-    // Error message
-    let errorMsg = '❌ Failed to download Instagram video.';
-    
-    if (err.message.includes('Private')) {
-      errorMsg = '❌ This Instagram post is private or unavailable.';
-    } else if (err.message.includes('404')) {
-      errorMsg = '❌ Instagram post not found or has been deleted.';
-    } else if (err.message.includes('Login required')) {
-      errorMsg = '❌ This Instagram content requires login. Try with a public post.';
-    }
-    
-    await sock.sendMessage(from, { text: errorMsg });
+}
 
-    // Clean up temp file if exists
-    if (fs.existsSync(tempFile)) {
-      fs.unlinkSync(tempFile);
-    }
-  }
+},1500)
+
+/* ===============================
+DOWNLOAD VIDEO
+================================ */
+
+await ytdlpExec(url,{
+output: tempFile,
+format:"mp4",
+noCheckCertificates:true,
+preferFreeFormats:true
+})
+
+clearInterval(progressInterval)
+
+/* ===============================
+FINAL 100%
+================================ */
+
+await sock.sendMessage(from,{
+text:"✅ Processing... 100%",
+edit:progressMsg.key
+})
+
+/* ===============================
+CHECK FILE
+================================ */
+
+if(!fs.existsSync(tempFile)){
+throw new Error("Download failed")
+}
+
+const stats = fs.statSync(tempFile)
+const fileSizeMB = (stats.size / (1024*1024)).toFixed(2)
+
+/* ===============================
+SEND VIDEO
+================================ */
+
+await sock.sendMessage(from,{
+video: fs.readFileSync(tempFile),
+mimetype:"video/mp4",
+caption:`📹 *Instagram Video Downloaded!*
+
+━━━━━━━━━━━━━━━━━━━━━
+📦 Size : ${fileSizeMB} MB
+🔗 Source : Instagram
+━━━━━━━━━━━━━━━━━━━━━
+⚡ Powered by MAINUL-X`
+})
+
+fs.unlinkSync(tempFile)
+
+console.log("Instagram video sent")
+
+}catch(err){
+
+console.log("Instagram download error",err.message)
+
+await sock.sendMessage(from,{
+text:"❌ Failed to download Instagram video."
+})
+
+if(fs.existsSync(tempFile)){
+fs.unlinkSync(tempFile)
+}
+
+}
+
 }
