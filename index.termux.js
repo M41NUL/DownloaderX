@@ -3,10 +3,6 @@
  * =============================================
  *        MAINUL-X WhatsApp Downloader Bot
  * =============================================
- * Author : Md. Mainul Islam (MAINUL-X)
- * GitHub : https://github.com/M41NUL
- * Project: DownloaderX - Multi Platform Video Downloader
- * =============================================
  */
 
 import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
@@ -20,6 +16,7 @@ import readline from "readline"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
+import { setBotProfile } from "./src/utils/profile.js"   // ✅ ADD
 
 const authDir = path.join(process.cwd(), "session")
 
@@ -28,7 +25,7 @@ let downloadsToday = 0
 const startTime = Date.now()
 
 /* =========================
-INPUT SYSTEM (TERMUX)
+INPUT SYSTEM
 ========================= */
 
 const rl = readline.createInterface({
@@ -72,21 +69,6 @@ const m = Math.floor((sec%3600)/60)
 return `${h}h ${m}m`
 }
 
-function getCPU(){
-const cpus = os.cpus()
-let idle = 0
-let total = 0
-
-for (const cpu of cpus){
-for (const type in cpu.times){
-total += cpu.times[type]
-}
-idle += cpu.times.idle
-}
-
-return 100 - Math.round(100 * idle / total)
-}
-
 function getMemory(){
 return Math.round(process.memoryUsage().rss/1024/1024)
 }
@@ -102,22 +84,15 @@ console.log(chalk.gray("──────────────────�
 console.log(chalk.green("Status  : Connected"))
 console.log(chalk.cyan(`User    : ${sock.user?.id}`))
 console.log(chalk.yellow(`Memory  : ${getMemory()} MB`))
-console.log(chalk.magenta(`CPU     : ${getCPU()} %`))
 console.log(chalk.blue(`Uptime  : ${getUptime()}`))
 
 console.log()
-
 console.log(chalk.green(`Messages processed : ${messagesProcessed}`))
 console.log(chalk.green(`Downloads today    : ${downloadsToday}`))
 
 console.log(chalk.gray("────────────────────────"))
+console.log()
 
-console.log()
-console.log(chalk.green("YouTube Downloader"))
-console.log(chalk.green("Facebook Downloader"))
-console.log(chalk.green("Instagram Downloader"))
-console.log(chalk.green("TikTok Downloader"))
-console.log()
 }
 
 /* =========================
@@ -154,16 +129,7 @@ const number = await askNumber()
 const code = await sock.requestPairingCode(number)
 
 console.log()
-
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log(chalk.green.bold("   MAINUL-X BOT LOGIN"))
-console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
-console.log()
-
 console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
-console.log(chalk.blue("Device       : Termux"))
-
-console.log()
 console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
 console.log()
 
@@ -173,7 +139,7 @@ console.log()
 CONNECTION EVENTS
 ========================= */
 
-sock.ev.on("connection.update",(update)=>{
+sock.ev.on("connection.update", async (update)=>{
 
 const { connection, lastDisconnect } = update
 
@@ -181,6 +147,8 @@ if(connection === "open"){
 
 showBanner()
 showStatus(sock)
+
+await setBotProfile(sock)   // ✅ PROFILE AUTO SET
 
 }
 
