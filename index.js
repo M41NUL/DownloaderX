@@ -286,3 +286,6 @@ console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
 console.log()
 
 }
+
+startBot()
+
