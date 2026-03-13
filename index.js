@@ -14,7 +14,7 @@ process.stdout.write("\x1Bc");
 import { setMaxListeners } from 'events';
 setMaxListeners(50);
 
-import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from 'atexovi-baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -22,6 +22,10 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import qrcode from 'qrcode-terminal';
 import { fileURLToPath } from 'url';
+
+// 👇 এই দুইটা import যোগ করুন
+import { handler } from './src/handler.js';
+import { wrapSendMessageGlobally } from './src/utils/typing.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,7 +46,6 @@ let reconnectTimer = null;
 
 async function startBot() {
   try {
-    // Clear previous timer
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
@@ -53,13 +56,15 @@ async function startBot() {
       auth: state,
       logger: pino({ level: 'silent' }),
       printQRInTerminal: false,
-      browser: ['Ubuntu', 'Chrome', '120.0.0'],
+      browser: ['MAINUL-X', 'Chrome', '1.0.0'],
       syncFullHistory: false,
       markOnlineOnConnect: false,
-      connectTimeoutMs: 60000  // 60 second timeout
+      connectTimeoutMs: 60000
     });
 
-    // Check session first
+    // 👇 typing.js wrapper যোগ করুন
+    wrapSendMessageGlobally(sock);
+
     const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
     const hasSession = files.length > 0;
 
@@ -67,7 +72,6 @@ async function startBot() {
       console.log(chalk.green('✅ Existing session found. Connecting...\n'));
     }
 
-    // Handle connection updates
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
       
@@ -80,9 +84,6 @@ async function startBot() {
         console.log(chalk.green('\n✅ Connected to WhatsApp successfully!'));
         console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
         console.log(chalk.magenta('⚡ Bot is ready! Send any video link.\n'));
-        
-        // Show menu after successful connection
-        await showMainMenu(sock);
       }
       
       if (connection === 'close') {
@@ -110,7 +111,18 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // If no session, show login menu
+    // 👇 message handler যোগ করুন
+    sock.ev.on('messages.upsert', async (m) => {
+      const msg = m.messages?.[0];
+      if (!msg || msg.key.fromMe) return;
+
+      try {
+        await handler(sock, msg);
+      } catch (err) {
+        console.error(chalk.red('[Handler Error]'), err);
+      }
+    });
+
     if (!hasSession) {
       await showLoginMenu(sock);
     }
@@ -171,11 +183,6 @@ async function showLoginMenu(sock) {
     console.log(chalk.yellow('\n👋 Bye!\n'));
     process.exit(0);
   }
-}
-
-async function showMainMenu(sock) {
-  // This will be called after successful connection
-  console.log(chalk.green('📱 Bot is active!'));
 }
 
 process.on('SIGINT', () => {
