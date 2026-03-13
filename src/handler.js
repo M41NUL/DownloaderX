@@ -26,11 +26,10 @@ const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 const BOT_START_TIME = Date.now()
 
 const messageCache = new Set()
-
 const spamTracker = new Map()
 
 /* ===============================
-CACHE CLEANER (FAST RESPONSE)
+CACHE CLEANER
 ================================ */
 
 setInterval(()=>{
@@ -56,7 +55,6 @@ const validCommands = [
 "!help","!menu"
 
 ]
- 
 
 function suggestCommand(input){
 
@@ -85,6 +83,10 @@ best=cmd
 return best
 
 }
+
+/* =================================
+HANDLER
+================================= */
 
 export async function handler(sock,msg){
 
@@ -289,52 +291,7 @@ HELP
 ================================ */
 
 if(lower==="!help"){
-
 await sendCommandList(sock,from)
-return
-
-}
-
-/* ===============================
-REPO
-================================ */
-
-if(lower==="!repo"){
-
-await sock.sendMessage(from,{
-text:"🌐 GitHub Repository\nhttps://github.com/M41NUL"
-})
-
-return
-}
-
-/* ===============================
-RESTART
-================================ */
-
-if(lower==="!restart"){
-
-await sock.sendMessage(from,{text:"🔄 Restarting bot..."})
-
-setTimeout(()=>{
-
-process.exit()
-
-},2000)
-
-return
-}
-
-/* ===============================
-LOGS
-================================ */
-
-if(lower==="!logs"){
-
-await sock.sendMessage(from,{
-text:"📄 Logs feature enabled\nCheck terminal logs."
-})
-
 return
 }
 
@@ -343,28 +300,15 @@ MENU
 ================================ */
 
 if(lower==="!menu"){
-
 await sendDownloaderMenu(sock,from)
 return
-
 }
 
-
-}
 /* ===============================
 UNKNOWN COMMAND + ANTI SPAM
 ================================ */
 
 if(text && text.startsWith("!")){
-
-const validCommands = [
-"!yt","!fb","!ig","!tt",
-"!ping","!uptime","!stats","!system",
-"!alive","!runtime","!botinfo",
-"!owner","!dev","!repo",
-"!update","!restart","!logs",
-"!help","!menu"
-]
 
 if(!validCommands.includes(lower)){
 
@@ -383,7 +327,7 @@ return
 
 data.count++
 
-if(data.count >= 3){
+if(data.count>=3){
 
 data.blockedUntil = now + 3000
 data.count = 0
@@ -399,8 +343,12 @@ return
 
 spamTracker.set(from,data)
 
+const suggestion = suggestCommand(lower)
+
 await sock.sendMessage(from,{
 text:`❌ Unknown command
+
+Did you mean: *${suggestion}* ?
 
 Type *!help* to see command list`
 })
@@ -410,6 +358,7 @@ return
 }
 
 }
+
 /* ===============================
 AUTO LINK DETECT
 ================================ */
@@ -570,6 +519,3 @@ rows:[
 })
 
 }
-
-
-
