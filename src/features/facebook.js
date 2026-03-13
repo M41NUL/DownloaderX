@@ -10,6 +10,7 @@
  * Feature: Facebook Video Downloader with Progress Bar
  * =============================================
  */
+
 import fs from "fs"
 import { dirname } from "path"
 import { fileURLToPath } from "url"
@@ -20,7 +21,7 @@ const __dirname = dirname(__filename)
 
 export async function handleFacebookDownloader(sock, from, url){
 
-if(!url.startsWith("http")){
+if(!url || !url.startsWith("http")){
 
 await sock.sendMessage(from,{
 text:"❌ Invalid URL. Please send a valid Facebook video link."
@@ -43,7 +44,7 @@ text:"⏳ Processing... 0%"
 })
 
 /* ===============================
-LIVE PROGRESS BAR
+FAKE PROGRESS BAR
 ================================ */
 
 let progress = 0
@@ -54,10 +55,14 @@ progress += 10
 
 if(progress <= 90){
 
+try{
+
 await sock.sendMessage(from,{
 text:`⏳ Processing... ${progress}%`,
 edit:progressMsg.key
 })
+
+}catch{}
 
 }
 
@@ -69,21 +74,27 @@ DOWNLOAD VIDEO
 
 await ytdlpExec(url,{
 output:tempFile,
-format:"mp4",
+format:"best",
+mergeOutputFormat:"mp4",
 noCheckCertificates:true,
-preferFreeFormats:true
+preferFreeFormats:true,
+addHeader:["referer:facebook.com"]
 })
 
 clearInterval(progressInterval)
 
 /* ===============================
-FINAL 100%
+FINAL PROGRESS
 ================================ */
+
+try{
 
 await sock.sendMessage(from,{
 text:"✅ Processing... 100%",
 edit:progressMsg.key
 })
+
+}catch{}
 
 /* ===============================
 CHECK FILE
@@ -105,7 +116,7 @@ SEND VIDEO
 
 await sock.sendMessage(from,{
 
-video:fs.readFileSync(tempFile),
+video:{ url: tempFile },
 
 mimetype:"video/mp4",
 
@@ -119,13 +130,17 @@ caption:`📹 *Facebook Video Downloaded!*
 
 })
 
+/* ===============================
+DELETE TEMP FILE
+================================ */
+
 fs.unlinkSync(tempFile)
 
 console.log("Facebook video sent")
 
 }catch(err){
 
-console.log("Facebook download error",err.message)
+console.log("Facebook download error:",err.message)
 
 await sock.sendMessage(from,{
 text:"❌ Failed to download Facebook video."
