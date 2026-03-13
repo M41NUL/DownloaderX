@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * =============================================
- *      MAINUL-X WhatsApp Media Downloader
+ *      MAINUL-X WhatsApp Media Downloader v1
  * =============================================
  * Author: Md. Mainul Islam (MAINUL-X)
  * GitHub: https://github.com/M41NUL
@@ -12,6 +12,10 @@
 // Clear screen first
 process.stdout.write("\x1Bc");
 
+// Fix MaxListeners warning
+import { setMaxListeners } from "events";
+setMaxListeners(25);
+
 import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
@@ -20,27 +24,33 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import qrcode from 'qrcode-terminal';
 import { fileURLToPath } from 'url';
+import figlet from 'figlet';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const authDir = path.join(__dirname, 'session');
 
-// Beautiful Banner
-const banner = `
-${chalk.cyan('╔══════════════════════════════════════════════════════════╗')}
-${chalk.cyan('║')}          ${chalk.yellow('███╗   ███╗ █████╗ ██╗███╗   ██╗██╗   ██╗██╗')}          ${chalk.cyan('║')}
-${chalk.cyan('║')}          ${chalk.yellow('████╗ ████║██╔══██╗██║████╗  ██║██║   ██║██║')}          ${chalk.cyan('║')}
-${chalk.cyan('║')}          ${chalk.yellow('██╔████╔██║███████║██║██╔██╗ ██║██║   ██║██║')}          ${chalk.cyan('║')}
-${chalk.cyan('║')}          ${chalk.yellow('██║╚██╔╝██║██╔══██║██║██║╚██╗██║██║   ██║██║')}          ${chalk.cyan('║')}
-${chalk.cyan('║')}          ${chalk.yellow('██║ ╚═╝ ██║██║  ██║██║██║ ╚████║╚██████╔╝███████╗')}      ${chalk.cyan('║')}
-${chalk.cyan('║')}          ${chalk.yellow('╚═╝     ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝')}      ${chalk.cyan('║')}
-${chalk.cyan('╠══════════════════════════════════════════════════════════╣')}
-${chalk.cyan('║')}        ${chalk.green('WhatsApp Media Downloader Bot v1.0')}          ${chalk.cyan('║')}
-${chalk.cyan('║')}              ${chalk.blue('Created by MAINUL-X 🇧🇩')}                    ${chalk.cyan('║')}
-${chalk.cyan('╚══════════════════════════════════════════════════════════╝')}
-`;
+// Ensure session folder exists
+if (!fs.existsSync(authDir)) {
+  fs.mkdirSync(authDir, { recursive: true });
+}
 
-console.log(banner);
+// Figlet Banner
+console.log(
+  chalk.cyan(
+    figlet.textSync('MAINUL-X', {
+      font: 'ANSI Shadow',
+      horizontalLayout: 'default',
+      verticalLayout: 'default',
+      width: 80
+    })
+  )
+);
+
+console.log(chalk.yellow('╔══════════════════════════════════════════════════════════╗'));
+console.log(chalk.yellow('║') + chalk.green('         WhatsApp Media Downloader Bot v1.0') + chalk.yellow('          ║'));
+console.log(chalk.yellow('║') + chalk.blue('              Created by MAINUL-X 🇧🇩') + chalk.yellow('                 ║'));
+console.log(chalk.yellow('╚══════════════════════════════════════════════════════════╝\n'));
 
 // Reconnect counter
 let reconnectAttempts = 0;
@@ -54,7 +64,7 @@ async function startBot() {
       auth: state,
       logger: pino({ level: 'silent' }),
       printQRInTerminal: false,
-      browser: ['DownloaderX', 'Chrome', '2.0.0']
+      browser: ['Ubuntu', 'Chrome', '120.0.0']
     });
 
     // Connection update handler
@@ -64,7 +74,6 @@ async function startBot() {
       if (qr) {
         console.log(chalk.yellow('\n📱 Scan this QR code with WhatsApp:\n'));
         qrcode.generate(qr, { small: true });
-        console.log(chalk.cyan('\n⚡ Or use pairing code option...\n'));
       }
 
       if (connection === 'open') {
@@ -81,7 +90,9 @@ async function startBot() {
         if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           reconnectAttempts++;
           console.log(chalk.yellow(`\n🔄 Reconnecting... Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}\n`));
-          setTimeout(startBot, 3000);
+          setTimeout(() => {
+            startBot();
+          }, 3000);
         } else if (reason === DisconnectReason.loggedOut) {
           console.log(chalk.red('\n❌ Logged out. Delete session folder and restart.\n'));
         } else {
@@ -92,23 +103,39 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Handle pairing code if no session
+    // Handle login method if no session
     const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
     
     if (files.length === 0) {
-      const { method } = await inquirer.prompt([
+      console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
+      console.log(chalk.cyan('║       LOGIN METHOD SELECTION      ║'));
+      console.log(chalk.cyan('╠════════════════════════════════════╣'));
+      console.log(chalk.cyan('║') + '  [1] 📱 QR Code (Recommended)    ' + chalk.cyan('║'));
+      console.log(chalk.cyan('║') + '  [2] 🔢 Pairing Code             ' + chalk.cyan('║'));
+      console.log(chalk.cyan('║') + '  [3] ℹ️  Developer Info          ' + chalk.cyan('║'));
+      console.log(chalk.cyan('║') + '  [4] 🚪 Exit                     ' + chalk.cyan('║'));
+      console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
+
+      const { choice } = await inquirer.prompt([
         {
-          type: 'list',
-          name: 'method',
-          message: chalk.cyan('Choose login method:'),
-          choices: [
-            { name: '📱 QR Code (Recommended)', value: 'qr' },
-            { name: '🔢 Pairing Code', value: 'pair' }
-          ]
+          type: 'input',
+          name: 'choice',
+          message: chalk.yellow('Enter your choice (1-4):'),
+          validate: (input) => {
+            const num = parseInt(input);
+            if (num >= 1 && num <= 4) return true;
+            return 'Please enter a number between 1 and 4';
+          }
         }
       ]);
 
-      if (method === 'pair') {
+      const selected = parseInt(choice);
+
+      if (selected === 1) {
+        console.log(chalk.green('\n✅ QR Code selected. Waiting for QR...\n'));
+        // QR code will show automatically
+      }
+      else if (selected === 2) {
         const { number } = await inquirer.prompt([
           {
             type: 'input',
@@ -131,12 +158,33 @@ async function startBot() {
           }
         }, 2000);
       }
+      else if (selected === 3) {
+        console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
+        console.log(chalk.cyan('║                                    ║'));
+        console.log(chalk.cyan('║') + '     👑 *MAINUL-X*                ' + chalk.cyan('║'));
+        console.log(chalk.cyan('║') + '     WhatsApp Media Downloader    ' + chalk.cyan('║'));
+        console.log(chalk.cyan('║') + '     Version: 1.0.0               ' + chalk.cyan('║'));
+        console.log(chalk.cyan('║') + '     GitHub: @M41NUL              ' + chalk.cyan('║'));
+        console.log(chalk.cyan('║') + '     🇧🇩 From Bangladesh           ' + chalk.cyan('║'));
+        console.log(chalk.cyan('║                                    ║'));
+        console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
+        
+        setTimeout(() => {
+          startBot();
+        }, 3000);
+      }
+      else if (selected === 4) {
+        console.log(chalk.yellow('\n👋 Goodbye!\n'));
+        process.exit(0);
+      }
     }
 
   } catch (err) {
     console.error(chalk.red('\n❌ Fatal error:'), err);
     console.log(chalk.yellow('\n🔄 Restarting...\n'));
-    setTimeout(startBot, 5000);
+    setTimeout(() => {
+      startBot();
+    }, 5000);
   }
 }
 
