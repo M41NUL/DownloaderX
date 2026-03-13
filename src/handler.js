@@ -159,7 +159,7 @@ export async function handler(sock, msg) {
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption ||
     ""
-  const lower = (text || "").toLowerCase()
+  const lower = (text || "").toLowerCase().trim()
 
   /* ===============================
   SPAM BLOCK SYSTEM (10 SEC)
@@ -475,27 +475,30 @@ export async function handler(sock, msg) {
   }
 
   /* ===============================
-AUTO LINK DETECT
-================================ */
-if (text) {
-  const platform = detectPlatform(text)
-  if (!platform) return
+  AUTO LINK DETECT
+  ================================ */
+  if (text) {
+    // First check if it's a platform link
+    const platform = detectPlatform(text)
+    if (platform) {
+      trackDownload(platform, from)
+      
+      const downloaders = {
+        youtube: handleYouTubeDownloader,
+        facebook: handleFacebookDownloader,
+        instagram: handleInstagramDownloader,
+        tiktok: handleTikTokDownloader
+      }
 
-  trackDownload(platform, from)
-
-  const downloaders = {
-    youtube: handleYouTubeDownloader,
-    facebook: handleFacebookDownloader,
-    instagram: handleInstagramDownloader,
-    tiktok: handleTikTokDownloader
+      const downloader = downloaders[platform]
+      if (downloader) {
+        await downloader(sock, from, text)
+      }
+      return
+    }
+    
+    // Not a platform link, continue with other checks
   }
-
-  const downloader = downloaders[platform]
-  if (downloader) {
-    await downloader(sock, from, text)
-  }
-  return
-}
 
 } // End of handler function
 
