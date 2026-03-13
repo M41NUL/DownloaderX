@@ -5,21 +5,30 @@ Author: Md. Mainul Islam (MAINUL-X)
 GitHub: https://github.com/M41NUL
 Telegram: @mdmainulislaminfo
 Email: githubmainul@gmail.com
+BOT NAME : MAINUL - X DOWNLOADER BOT
 =============================================
 */
 
 import fs from "fs"
 import path from "path"
 import os from "os"
-
 import { userState } from "./userState.js"
-
 import { handleYouTubeDownloader } from "./features/youtube.js"
 import { handleFacebookDownloader } from "./features/facebook.js"
 import { handleInstagramDownloader } from "./features/instagram.js"
 import { handleTikTokDownloader } from "./features/tiktok.js"
-
 import { validateUrl, detectPlatform } from "./utils/validateUrl.js"
+import {
+BOT_NAME,
+VERSION,
+OWNER_NAME,
+OWNER_ALIAS,
+WHATSAPP,
+TELEGRAM,
+GITHUB_URL,
+EMAIL_PRIMARY,
+EMAIL_SECONDARY
+} from "../config/bot.js"
 
 const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 const youtubeImage = path.join(process.cwd(),"src/assets/youtube.png")
@@ -194,7 +203,7 @@ ALIVE
 if(lower==="!alive"){
 
 await sock.sendMessage(from,{
-text:`🤖 MAINUL-X BOT
+text:`🤖 MAINUL - X DOWNLOADER BOT
 
 Status : Online
 System : Running
@@ -234,10 +243,11 @@ if(lower==="!botinfo"){
 await sock.sendMessage(from,{
 text:`🤖 BOT INFO
 
-Name : MAINUL-X Downloader
-Version : v1.0
+Name : ${BOT_NAME}
+Version : v${VERSION}
 Platform : WhatsApp MD
-Developer : MAINUL-X`
+Developer : ${OWNER_ALIAS}
+`
 })
 
 return
@@ -252,14 +262,18 @@ if(lower==="!owner"){
 await sock.sendMessage(from,{
 text:`👨‍💻 BOT OWNER
 
-Name : Md. Mainul Islam
-Alias : MAINUL-X
+Name : ${OWNER_NAME}
+Alias : ${OWNER_ALIAS}
 
-Telegram
-@mdmainulislaminfo
+📱 WhatsApp
+${WHATSAPP}
 
-GitHub
-https://github.com/M41NUL`
+🌐 GitHub
+${GITHUB_URL}
+
+📢 Telegram
+${TELEGRAM}
+`
 })
 
 return
@@ -274,22 +288,83 @@ if(lower==="!dev"){
 await sock.sendMessage(from,{
 text:`👨‍💻 Developer Information
 
-Name: Md. Mainul Islam
-Alias: MAINUL-X
+Name : ${OWNER_NAME}
+Alias : ${OWNER_ALIAS}
 
-GitHub:
-https://github.com/M41NUL
+📱 WhatsApp
+${WHATSAPP}
 
-Telegram:
-https://t.me/mdmainulislaminfo
+🌐 GitHub
+${GITHUB_URL}
 
-Email:
-githubmainul@gmail.com`
+📢 Telegram
+https://t.me/${TELEGRAM.replace("@","")}
+
+📧 Email
+${EMAIL_PRIMARY}
+${EMAIL_SECONDARY}
+
+📜 License
+${LICENSE}
+
+© ${COPYRIGHT}
+`
 })
 
 return
 }
 
+if(lower === "!repo"){
+
+await sock.sendMessage(from,{
+text:`🌐 GitHub Repository
+
+MAINUL - X DOWNLOADER BOT
+
+https://github.com/M41NUL/DownloaderX`
+})
+
+return
+}
+/* ===============================
+UPDATE
+================================ */
+
+if(lower === "!update"){
+
+await sock.sendMessage(from,{
+text:`🔄 BOT UPDATE
+
+Current Version : v1.0
+
+Check latest updates here:
+
+https://github.com/M41NUL/DownloaderX
+
+Developer : MAINUL - X`
+})
+
+return
+}
+/* ===============================
+LOGS
+================================ */
+
+if(lower === "!logs"){
+
+await sock.sendMessage(from,{
+text:`📄 BOT LOGS
+
+Status : Running
+Errors : None detected
+System : Stable
+
+Tip:
+Check server console for detailed logs.`
+})
+
+return
+}
 /* ===============================
 HELP
 ================================ */
