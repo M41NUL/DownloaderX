@@ -41,11 +41,13 @@ msg.message?.extendedTextMessage?.text ||
 msg.message?.imageMessage?.caption ||
 msg.message?.videoMessage?.caption
 
+const lower = text?.toLowerCase()
+
 /* ===============================
 PING
 ================================ */
 
-if(text?.toLowerCase()==="!ping"){
+if(lower==="!ping"){
 
 const start = Date.now()
 
@@ -65,7 +67,7 @@ return
 UPTIME
 ================================ */
 
-if(text?.toLowerCase()==="!uptime"){
+if(lower==="!uptime"){
 
 const uptime = Math.floor((Date.now()-BOT_START_TIME)/1000)
 
@@ -84,7 +86,7 @@ return
 STATS
 ================================ */
 
-if(text?.toLowerCase()==="!stats"){
+if(lower==="!stats"){
 
 const ram = Math.round(process.memoryUsage().rss/1024/1024)
 
@@ -103,7 +105,7 @@ return
 SYSTEM
 ================================ */
 
-if(text?.toLowerCase()==="!system"){
+if(lower==="!system"){
 
 await sock.sendMessage(from,{
 text:`⚙ SYSTEM INFO
@@ -121,7 +123,7 @@ return
 ALIVE
 ================================ */
 
-if(text?.toLowerCase()==="!alive"){
+if(lower==="!alive"){
 
 await sock.sendMessage(from,{
 text:`🤖 MAINUL-X BOT
@@ -138,7 +140,7 @@ return
 RUNTIME
 ================================ */
 
-if(text?.toLowerCase()==="!runtime"){
+if(lower==="!runtime"){
 
 const runtime = process.uptime()
 
@@ -159,7 +161,7 @@ return
 BOTINFO
 ================================ */
 
-if(text?.toLowerCase()==="!botinfo"){
+if(lower==="!botinfo"){
 
 await sock.sendMessage(from,{
 text:`🤖 BOT INFO
@@ -177,7 +179,7 @@ return
 OWNER
 ================================ */
 
-if(text?.toLowerCase()==="!owner"){
+if(lower==="!owner"){
 
 await sock.sendMessage(from,{
 text:`👨‍💻 BOT OWNER
@@ -199,7 +201,7 @@ return
 DEV
 ================================ */
 
-if(text?.toLowerCase()==="!dev"){
+if(lower==="!dev"){
 
 await sock.sendMessage(from,{
 text:`👨‍💻 Developer Information
@@ -224,7 +226,7 @@ return
 UPDATE
 ================================ */
 
-if(text?.toLowerCase()==="!update"){
+if(lower==="!update"){
 
 await sock.sendMessage(from,{
 text:`🔄 BOT UPDATE
@@ -240,7 +242,7 @@ return
 HELP / COMMAND LIST
 ================================ */
 
-if(text?.toLowerCase()==="!help"){
+if(lower==="!help"){
 
 await sendCommandList(sock,from)
 
@@ -251,7 +253,7 @@ return
 REPO
 ================================ */
 
-if(text?.toLowerCase()==="!repo"){
+if(lower==="!repo"){
 
 await sock.sendMessage(from,{
 text:"🌐 GitHub Repository\nhttps://github.com/M41NUL"
@@ -264,7 +266,7 @@ return
 RESTART
 ================================ */
 
-if(text?.toLowerCase()==="!restart"){
+if(lower==="!restart"){
 
 await sock.sendMessage(from,{text:"🔄 Restarting bot..."})
 
@@ -279,7 +281,7 @@ return
 LOGS
 ================================ */
 
-if(text?.toLowerCase()==="!logs"){
+if(lower==="!logs"){
 
 await sock.sendMessage(from,{
 text:"📄 Logs feature enabled\nCheck terminal logs."
@@ -289,13 +291,24 @@ return
 }
 
 /* ===============================
-MENU
+MENU COMMAND
 ================================ */
 
-if(text?.toLowerCase()==="!menu"){
+if(lower==="!menu"){
 
 await sendDownloaderMenu(sock,from)
 return
+}
+
+/* ===============================
+AUTO MENU IF USER SEND NORMAL TEXT
+================================ */
+
+if(text && !text.startsWith("!") && !detectPlatform(text)){
+
+await sendDownloaderMenu(sock,from)
+return
+
 }
 
 /* ===============================
@@ -441,7 +454,7 @@ await sock.sendMessage(from,{
 
 image:fs.readFileSync(menuImagePath),
 
-caption:`MAINUL-X Downloader Bot
+caption:`🤖 MAINUL-X Downloader Bot
 
 Choose a platform`,
 
@@ -453,7 +466,7 @@ interactiveButtons:[
 name:"single_select",
 buttonParamsJson:JSON.stringify({
 
-title:"Video Downloader",
+title:"📥 Video Downloader",
 
 sections:[
 
