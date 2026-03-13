@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-
+/**
+ * =============================================
+ *        MAINUL-X WhatsApp Downloader Bot
+ * =============================================
+ * Author : Md. Mainul Islam (MAINUL-X)
+ * GitHub : https://github.com/M41NUL
+ * Project: DownloaderX - Multi Platform Video Downloader
+ * =============================================
+ */
 import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
 import pino from "pino"
 import fs from "fs"
@@ -237,11 +245,15 @@ console.log(err)
 PAIRING LOGIN
 ========================= */
 
-const files = fs.readdirSync(authDir).filter(f=>f.endsWith(".json"))
+const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
 
-if(files.length===0){
+if(files.length === 0){
 
-const { waNumber } = await inquirer.prompt([
+let waNumber = process.env.WA_NUMBER
+
+if(!waNumber){
+
+const response = await inquirer.prompt([
 {
 type:"input",
 name:"waNumber",
@@ -250,17 +262,27 @@ validate:(input)=> /^\d+$/.test(input) ? true : "Invalid number"
 }
 ])
 
+waNumber = response.waNumber
+
+}
+
 const code = await sock.requestPairingCode(waNumber)
 
 console.log()
-console.log(chalk.green("Pairing Code:"),chalk.bold(code))
+
+console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
+console.log(chalk.green.bold("   MAINUL-X BOT LOGIN"))
+console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━"))
+console.log()
+
+console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
+
+const device = process.env.WA_NUMBER ? "Railway Server" : "Local / Termux"
+
+console.log(chalk.blue("Device       : "), device)
+
+console.log()
 console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
 console.log()
 
 }
-
-}
-
-startBot()
-
-
