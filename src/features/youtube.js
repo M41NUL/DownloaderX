@@ -7,129 +7,158 @@
  * Telegram: @mdmainulislaminfo
  * Email: githubmainul@gmail.com
  * =============================================
- * Feature: YouTube Video Downloader with Progress Bar
+ * Feature: YouTube Video Downloader
+ * Utility: Live Progress Bar (Message Edit)
  * =============================================
  */
 
-import fs from 'fs';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import ytdlpExec from 'yt-dlp-exec';
+import fs from "fs"
+import { dirname } from "path"
+import { fileURLToPath } from "url"
+import ytdlpExec from "yt-dlp-exec"
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-/**
- * YouTube video downloader function with progress bar
- * @param {Object} sock - WhatsApp socket connection
- * @param {String} from - Sender's chat ID
- * @param {String} url - YouTube video URL
- */
-export async function handleYouTubeDownloader(sock, from, url) {
-  // URL validation
-  if (!url.startsWith('http')) {
-    await sock.sendMessage(from, { text: '❌ Invalid URL. Please provide a valid YouTube video link.' });
-    return;
-  }
+export async function handleYouTubeDownloader(sock, from, url){
 
-  // Check if it's YouTube URL
-  if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-    await sock.sendMessage(from, { text: '❌ This is not a YouTube URL. Please provide a valid YouTube link.' });
-    return;
-  }
+if(!url.startsWith("http")){
+await sock.sendMessage(from,{
+text:"❌ Invalid URL. Please provide a valid YouTube video link."
+})
+return
+}
 
-  // Send initial message
-  await sock.sendMessage(from, { text: '⏳ Initializing YouTube download...' });
+if(!url.includes("youtube.com") && !url.includes("youtu.be")){
+await sock.sendMessage(from,{
+text:"❌ This is not a YouTube URL."
+})
+return
+}
 
-  const tempFile = `${__dirname}/tmp_yt_${Date.now()}.mp4`;
+const tempFile = `${__dirname}/tmp_yt_${Date.now()}.mp4`
 
-  try {
-    // Get video info first
-    await sock.sendMessage(from, { text: '🔍 Fetching video information...' });
-    
-    const videoInfo = await ytdlpExec(url, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      quiet: true
-    });
+try{
 
-    const videoTitle = videoInfo?.title || 'YouTube Video';
-    const videoDuration = videoInfo?.duration || 0;
-    const minutes = Math.floor(videoDuration / 60);
-    const seconds = videoDuration % 60;
-    const durationText = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+/* ===============================
+FETCH VIDEO INFO
+================================ */
 
-    await sock.sendMessage(from, { text: `📹 *Video Found*\nTitle: ${videoTitle}\nDuration: ${durationText}\n\n⬇️ Starting download...` });
+const videoInfo = await ytdlpExec(url,{
+dumpSingleJson:true,
+noWarnings:true,
+quiet:true
+})
 
-    // Progress tracking
-    let lastProgress = 0;
-    const progressInterval = setInterval(async () => {
-      if (lastProgress < 100) {
-        const progressMsg = [
-          '⏳ Downloading... 0%',
-          '🔄 25% downloaded',
-          '📥 50% downloaded',
-          '📦 75% downloaded',
-          '✅ 100% complete'
-        ][Math.floor(lastProgress / 25)];
-        
-        if (lastProgress % 25 === 0 && lastProgress < 100) {
-          await sock.sendMessage(from, { text: progressMsg });
-        }
-        lastProgress += 25;
-      }
-    }, 2000);
+const videoTitle = videoInfo?.title || "YouTube Video"
+const duration = videoInfo?.duration || 0
 
-    // Download video
-    await ytdlpExec(url, { 
-      output: tempFile, 
-      format: 'mp4',
-      noCheckCertificates: true,
-      preferFreeFormats: true
-    });
+const minutes = Math.floor(duration/60)
+const seconds = duration%60
 
-    clearInterval(progressInterval);
-    await sock.sendMessage(from, { text: '✅ Download complete! Now sending video...' });
+const durationText = minutes>0 ? `${minutes}m ${seconds}s` : `${seconds}s`
 
-    // Check if file exists
-    if (!fs.existsSync(tempFile)) {
-      throw new Error('Download failed - file not created');
-    }
+/* ===============================
+START MESSAGE
+================================ */
 
-    // Get file size
-    const stats = fs.statSync(tempFile);
-    const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+const progressMsg = await sock.sendMessage(from,{
+text:`📹 *Video Found*
 
-    // Send video to WhatsApp
-    await sock.sendMessage(from, {
-      video: fs.readFileSync(tempFile),
-      mimetype: 'video/mp4',
-      caption: `🎥 *YouTube Video Downloaded!*\n━━━━━━━━━━━━━━━━━━━━━\n📌 *Title:* ${videoTitle.substring(0, 50)}${videoTitle.length > 50 ? '...' : ''}\n⏱️ *Duration:* ${durationText}\n📦 *Size:* ${fileSizeMB} MB\n🔗 *Source:* YouTube\n━━━━━━━━━━━━━━━━━━━━━\n⚡ Powered by MAINUL-X`
-    });
+Title: ${videoTitle.substring(0,50)}
+Duration: ${durationText}
 
-    // Clean up temp file
-    fs.unlinkSync(tempFile);
-    console.log(`✅ YouTube video downloaded and sent: ${url}`);
+⏳ Processing... 0%`
+})
 
-  } catch (err) {
-    console.error('❌ YouTube Download Error:', err.message);
-    
-    // Error message
-    let errorMsg = '❌ Failed to download YouTube video.';
-    
-    if (err.message.includes('Video unavailable')) {
-      errorMsg = '❌ This YouTube video is unavailable or private.';
-    } else if (err.message.includes('Copyright')) {
-      errorMsg = '❌ This video is unavailable due to copyright restrictions.';
-    } else if (err.message.includes('age-restricted')) {
-      errorMsg = '❌ This video is age-restricted and cannot be downloaded.';
-    }
-    
-    await sock.sendMessage(from, { text: errorMsg });
+/* ===============================
+LIVE PROGRESS BAR
+================================ */
 
-    // Clean up temp file if exists
-    if (fs.existsSync(tempFile)) {
-      fs.unlinkSync(tempFile);
-    }
-  }
+let progress = 0
+
+const progressInterval = setInterval(async()=>{
+
+progress += 10
+
+if(progress <= 90){
+
+await sock.sendMessage(from,{
+text:`⏳ Processing... ${progress}%`,
+edit:progressMsg.key
+})
+
+}
+
+},1500)
+
+/* ===============================
+DOWNLOAD VIDEO
+================================ */
+
+await ytdlpExec(url,{
+output: tempFile,
+format:"mp4",
+noCheckCertificates:true,
+preferFreeFormats:true
+})
+
+clearInterval(progressInterval)
+
+/* ===============================
+FINAL 100%
+================================ */
+
+await sock.sendMessage(from,{
+text:"✅ Processing... 100%",
+edit:progressMsg.key
+})
+
+/* ===============================
+CHECK FILE
+================================ */
+
+if(!fs.existsSync(tempFile)){
+throw new Error("Download failed")
+}
+
+const stats = fs.statSync(tempFile)
+const fileSizeMB = (stats.size/(1024*1024)).toFixed(2)
+
+/* ===============================
+SEND VIDEO
+================================ */
+
+await sock.sendMessage(from,{
+video: fs.readFileSync(tempFile),
+mimetype:"video/mp4",
+caption:`🎥 *YouTube Video Downloaded!*
+
+━━━━━━━━━━━━━━━━━━━━━
+📌 Title : ${videoTitle.substring(0,50)}
+⏱ Duration : ${durationText}
+📦 Size : ${fileSizeMB} MB
+🔗 Source : YouTube
+━━━━━━━━━━━━━━━━━━━━━
+⚡ Powered by MAINUL-X`
+})
+
+fs.unlinkSync(tempFile)
+
+console.log("YouTube video sent")
+
+}catch(err){
+
+console.log("YouTube download error",err.message)
+
+await sock.sendMessage(from,{
+text:"❌ Failed to download YouTube video."
+})
+
+if(fs.existsSync(tempFile)){
+fs.unlinkSync(tempFile)
+}
+
+}
+
 }
