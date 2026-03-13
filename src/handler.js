@@ -13,16 +13,77 @@ import path from "path"
 import os from "os"
 
 import { userState } from "./userState.js"
+
 import { handleYouTubeDownloader } from "./features/youtube.js"
 import { handleFacebookDownloader } from "./features/facebook.js"
 import { handleInstagramDownloader } from "./features/instagram.js"
 import { handleTikTokDownloader } from "./features/tiktok.js"
+
 import { validateUrl, detectPlatform } from "./utils/validateUrl.js"
 
 const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
+
 const BOT_START_TIME = Date.now()
 
 const messageCache = new Set()
+
+/* ===============================
+CACHE CLEANER (FAST RESPONSE)
+================================ */
+
+setInterval(()=>{
+messageCache.clear()
+},30000)
+
+/* ===============================
+COMMAND LIST
+================================ */
+
+const validCommands = [
+
+"!yt","!fb","!ig","!tt",
+
+"!ping","!uptime","!stats","!system",
+
+"!alive","!runtime","!botinfo",
+
+"!owner","!dev","!repo",
+
+"!update","!restart","!logs",
+
+"!help","!menu"
+
+]
+
+const spamTracker = new Map()
+
+function suggestCommand(input){
+
+let best=null
+let score=0
+
+for(const cmd of validCommands){
+
+let match=0
+
+for(let i=0;i<input.length;i++){
+
+if(cmd[i]===input[i]) match++
+
+}
+
+if(match>score){
+
+score=match
+best=cmd
+
+}
+
+}
+
+return best
+
+}
 
 export async function handler(sock,msg){
 
@@ -223,30 +284,14 @@ return
 }
 
 /* ===============================
-UPDATE
-================================ */
-
-if(lower==="!update"){
-
-await sock.sendMessage(from,{
-text:`🔄 BOT UPDATE
-
-Version : v1.0
-Status : Latest Version`
-})
-
-return
-}
-
-/* ===============================
-HELP / COMMAND LIST
+HELP
 ================================ */
 
 if(lower==="!help"){
 
 await sendCommandList(sock,from)
-
 return
+
 }
 
 /* ===============================
@@ -271,7 +316,9 @@ if(lower==="!restart"){
 await sock.sendMessage(from,{text:"🔄 Restarting bot..."})
 
 setTimeout(()=>{
+
 process.exit()
+
 },2000)
 
 return
@@ -291,80 +338,81 @@ return
 }
 
 /* ===============================
-MENU COMMAND
+MENU
 ================================ */
 
 if(lower==="!menu"){
 
 await sendDownloaderMenu(sock,from)
 return
+
 }
 
 /* ===============================
-AUTO MENU IF USER SEND NORMAL TEXT
+UNKNOWN COMMAND + ANTI SPAM
+================================ */
+
+if(text && text.startsWith("!")){
+
+if(!validCommands.includes(lower)){
+
+let data = spamTracker.get(from) || {count:0,blockedUntil:0}
+
+const now = Date.now()
+
+if(now < data.blockedUntil){
+
+await sock.sendMessage(from,{
+text:"⛔ Too many wrong commands\nTry again in 3 seconds"
+})
+
+return
+}
+
+data.count++
+
+if(data.count>=3){
+
+data.blockedUntil = now + 3000
+data.count = 0
+
+spamTracker.set(from,data)
+
+await sock.sendMessage(from,{
+text:"🚫 Command spam detected\nUser suspended for 3 seconds"
+})
+
+return
+}
+
+spamTracker.set(from,data)
+
+const suggestion = suggestCommand(lower)
+
+await sock.sendMessage(from,{
+text:`❌ Unknown command
+
+Did you mean: *${suggestion}* ?
+
+Type *!help* to see command list`
+})
+
+return
+
+}
+
+}
+
+/* ===============================
+AUTO MENU
 ================================ */
 
 if(text && !text.startsWith("!") && !detectPlatform(text)){
 
 await sendDownloaderMenu(sock,from)
-return
-
-}
-
-/* ===============================
-ROW BUTTON
-================================ */
-
-let rowId
-
-try{
-
-if(msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage){
-
-rowId = JSON.parse(
-msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson
-).id
-
-}
-
-}catch(e){}
-
-if(rowId){
-
-switch(rowId){
-
-case "yt_downloader":
-
-userState.set(from,{step:"yt_wait_url"})
-await sock.sendMessage(from,{text:"Send YouTube link"})
-break
-
-case "fb_downloader":
-
-userState.set(from,{step:"fb_wait_url"})
-await sock.sendMessage(from,{text:"Send Facebook link"})
-break
-
-case "ig_downloader":
-
-userState.set(from,{step:"ig_wait_url"})
-await sock.sendMessage(from,{text:"Send Instagram link"})
-break
-
-case "tt_downloader":
-
-userState.set(from,{step:"tt_wait_url"})
-await sock.sendMessage(from,{text:"Send TikTok link"})
-break
-
-case "show_commands":
-
-await sendCommandList(sock,from)
-break
-
-}
 
 return
+
 }
 
 /* ===============================
@@ -402,6 +450,7 @@ break
 await downloader(sock,from,text)
 
 return
+
 }
 
 }
@@ -463,7 +512,9 @@ footer:"MAINUL-X SYSTEM",
 interactiveButtons:[
 
 {
+
 name:"single_select",
+
 buttonParamsJson:JSON.stringify({
 
 title:"📥 Video Downloader",
@@ -471,48 +522,27 @@ title:"📥 Video Downloader",
 sections:[
 
 {
+
 title:"Platforms",
 
 rows:[
 
-{
-title:"YouTube",
-description:"Download YouTube video",
-id:"yt_downloader"
-},
-
-{
-title:"Facebook",
-description:"Download Facebook video",
-id:"fb_downloader"
-},
-
-{
-title:"Instagram",
-description:"Download Instagram reels",
-id:"ig_downloader"
-},
-
-{
-title:"TikTok",
-description:"Download TikTok video",
-id:"tt_downloader"
-}
+{title:"YouTube",description:"Download YouTube video",id:"yt_downloader"},
+{title:"Facebook",description:"Download Facebook video",id:"fb_downloader"},
+{title:"Instagram",description:"Download Instagram reels",id:"ig_downloader"},
+{title:"TikTok",description:"Download TikTok video",id:"tt_downloader"}
 
 ]
 
 },
 
 {
+
 title:"System",
 
 rows:[
 
-{
-title:"Show Commands",
-description:"All command list",
-id:"show_commands"
-}
+{title:"Show Commands",description:"All command list",id:"show_commands"}
 
 ]
 
@@ -521,6 +551,7 @@ id:"show_commands"
 ]
 
 })
+
 }
 
 ]
