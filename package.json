@@ -11,7 +11,7 @@
   "author": "MAINUL-X",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.0",
+    "atexovi-baileys": "7.5.6",
     "axios": "^1.6.0",
     "chalk": "^5.6.2",
     "dotenv": "^17.2.3",
