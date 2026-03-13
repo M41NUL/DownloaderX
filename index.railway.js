@@ -56,7 +56,14 @@ const { state, saveCreds } = await useMultiFileAuthState(authDir)
 const sock = makeWASocket({
 
 auth: state,
-logger: pino({level:"silent"})
+
+logger: pino({ level:"silent" }),
+
+printQRInTerminal:false,
+
+markOnlineOnConnect:true,
+
+syncFullHistory:false
 
 })
 
@@ -149,14 +156,16 @@ MESSAGE LISTENER
 
 sock.ev.on("messages.upsert",async(m)=>{
 
+try{
+
 const msg = m.messages?.[0]
 
 if(!msg) return
+if(!msg.message) return
 if(msg.key.fromMe) return
+if(m.type !== "notify") return
 
 messagesProcessed++
-
-try{
 
 await handler(sock,msg)
 
