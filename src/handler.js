@@ -26,6 +26,7 @@ const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 const BOT_START_TIME = Date.now()
 
 const messageCache = new Set()
+
 const spamTracker = new Map()
 
 /* ===============================
@@ -55,8 +56,7 @@ const validCommands = [
 "!help","!menu"
 
 ]
-
-const spamTracker = new Map()
+ 
 
 function suggestCommand(input){
 
@@ -570,5 +570,6 @@ rows:[
 })
 
 }
+
 
 
