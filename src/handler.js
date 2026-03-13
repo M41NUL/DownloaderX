@@ -1,15 +1,13 @@
 /**
- * =============================================
- *      MAINUL-X WhatsApp Media Downloader
- * =============================================
- * Author: Md. Mainul Islam (MAINUL-X)
- * GitHub: https://github.com/M41NUL
- * Telegram: @mdmainulislaminfo
- * Email: githubmainul@gmail.com
- * BOT NAME : MAINUL - X DOWNLOADER BOT
- * =============================================
- */
-
+=============================================
+MAINUL-X WhatsApp Media Downloader
+Author: Md. Mainul Islam (MAINUL-X)
+GitHub: https://github.com/M41NUL
+Telegram: @mdmainulislaminfo
+Email: githubmainul@gmail.com
+BOT NAME : MAINUL - X DOWNLOADER BOT
+=============================================
+*/
 import fs from "fs"
 import path from "path"
 import os from "os"
@@ -30,39 +28,32 @@ import {
   EMAIL_PRIMARY,
   EMAIL_SECONDARY
 } from "../config/bot.js"
-
 const menuImagePath = path.join(process.cwd(), "src/assets/menu.jpg")
 const youtubeImage = path.join(process.cwd(), "src/assets/youtube.png")
 const facebookImage = path.join(process.cwd(), "src/assets/facebook.png")
 const instagramImage = path.join(process.cwd(), "src/assets/instagram.png")
 const tiktokImage = path.join(process.cwd(), "src/assets/tiktok.png")
-
 const BOT_START_TIME = Date.now()
 const messageCache = new Set()
 const spamTracker = new Map()
-
 /* ===============================
 ADMIN CONFIGURATION
 ================================ */
 const ADMIN_NUMBERS = [
-  "8801308850528@s.whatsapp.net",  // আপনার নম্বর
-  "01308850528@s.whatsapp.net"      // বিকল্প ফরম্যাট
+  "8801308850528@s.whatsapp.net",
+  "01308850528@s.whatsapp.net"
 ]
-
 const isAdmin = (jid) => {
   return ADMIN_NUMBERS.includes(jid) || ADMIN_NUMBERS.includes(jid.split('@')[0] + '@s.whatsapp.net')
 }
-
 /* ===============================
 BROADCAST SYSTEM
 ================================ */
 const subscribers = new Set()
-
 /* ===============================
 DOWNLOAD STATS
 ================================ */
 const downloadStats = new Map()
-
 function trackDownload(platform, from) {
   const userStats = downloadStats.get(from) || { 
     total: 0, 
@@ -77,20 +68,16 @@ function trackDownload(platform, from) {
   userStats.lastDownload = Date.now()
   downloadStats.set(from, userStats)
 }
-
 function getStats(from) {
   return downloadStats.get(from) || { total: 0, youtube: 0, facebook: 0, instagram: 0, tiktok: 0 }
 }
-
 /* ===============================
 AUTO REACTION SYSTEM
 ================================ */
 const reactions = ["⚡", "🔥", "🤖", "🚀", "✨"]
-
 function getRandomReaction() {
   return reactions[Math.floor(Math.random() * reactions.length)]
 }
-
 /* ===============================
 GREETING LIST
 ================================ */
@@ -99,14 +86,12 @@ const greetings = [
   "salam", "assalamu alaikum", "assalamualaikum",
   "menu"
 ]
-
 /* ===============================
 CACHE CLEANER
 ================================ */
 setInterval(() => {
   messageCache.clear()
 }, 30000)
-
 /* ===============================
 COMMAND LIST
 ================================ */
@@ -119,13 +104,10 @@ const validCommands = [
   "!help", "!menu", "!subscribe", "!unsubscribe",
   "!leaderboard", "!mystats"
 ]
-
-// অ্যাডমিন কমান্ড
 const adminCommands = [
   "!admin", "!users", "!broadcast", "!adminstats",
   "!clearcache", "!block", "!unblock", "!listadmin"
 ]
-
 function suggestCommand(input) {
   let best = null
   let score = 0
@@ -141,40 +123,29 @@ function suggestCommand(input) {
   }
   return best
 }
-
 /* =================================
 HANDLER
 ================================= */
 export async function handler(sock, msg) {
-  // FIX 1: Check if msg exists
   if (!msg) return
-
   if (messageCache.has(msg.key?.id)) return
   messageCache.add(msg.key?.id)
-
   const from = msg.key?.remoteJid
   if (!from) return
-
   const state = userState.get(from) || { step: "start" }
-
   const text =
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption ||
     ""
-
-  // FIX 2: Safe lowercase conversion
   const lower = (text || "").toLowerCase()
-
   /* ===============================
   SPAM BLOCK SYSTEM (10 SEC)
   ================================ */
   let spam = spamTracker.get(from) || { count: 0, blockedUntil: 0 }
   const now = Date.now()
-
   if (now < spam.blockedUntil) return
-
   spam.count++
   if (spam.count >= 10) {
     spam.blockedUntil = now + 10000
@@ -186,7 +157,6 @@ export async function handler(sock, msg) {
     return
   }
   spamTracker.set(from, spam)
-
   /* ===============================
   AUTO REACTION
   ================================ */
@@ -195,13 +165,11 @@ export async function handler(sock, msg) {
       react: { text: getRandomReaction(), key: msg.key }
     })
   } catch { }
-
   /* ===============================
   MENU BUTTON RESPONSE
   ================================ */
   const selectedButton =
     msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId
-
   if (selectedButton) {
     if (selectedButton === "yt_downloader") {
       await sock.sendMessage(from, { text: "📺 Send YouTube video link" })
@@ -224,7 +192,6 @@ export async function handler(sock, msg) {
       return
     }
   }
-
   /* ===============================
   SMART GREETING SYSTEM
   ================================ */
@@ -235,7 +202,6 @@ export async function handler(sock, msg) {
     await sendDownloaderMenu(sock, from)
     return
   }
-
   /* ===============================
   SUBSCRIBE SYSTEM
   ================================ */
@@ -244,13 +210,11 @@ export async function handler(sock, msg) {
     await sock.sendMessage(from, { text: "✅ You're now subscribed to bot updates!" })
     return
   }
-
   if (lower === "!unsubscribe") {
     subscribers.delete(from)
     await sock.sendMessage(from, { text: "❌ Unsubscribed from updates" })
     return
   }
-
   /* ===============================
   LEADERBOARD
   ================================ */
@@ -258,12 +222,10 @@ export async function handler(sock, msg) {
     const sorted = [...downloadStats.entries()]
       .sort((a, b) => b[1].total - a[1].total)
       .slice(0, 10)
-    
     if (sorted.length === 0) {
       await sock.sendMessage(from, { text: "📊 No downloads yet!" })
       return
     }
-
     let msg = "🏆 *DOWNLOAD LEADERBOARD*\n\n"
     sorted.forEach(([user, stats], i) => {
       const shortId = user.split('@')[0].slice(-6)
@@ -272,25 +234,15 @@ export async function handler(sock, msg) {
     await sock.sendMessage(from, { text: msg })
     return
   }
-
   /* ===============================
   MY STATS
   ================================ */
   if (lower === "!mystats") {
     const stats = getStats(from)
-    const msg = `📊 *YOUR DOWNLOAD STATS*
-
-📥 Total: ${stats.total}
-🎥 YouTube: ${stats.youtube}
-📘 Facebook: ${stats.facebook}
-📸 Instagram: ${stats.instagram}
-🎵 TikTok: ${stats.tiktok}
-
-⏱️ Last: ${stats.lastDownload ? new Date(stats.lastDownload).toLocaleString() : 'Never'}`
+    const msg = `📊 *YOUR DOWNLOAD STATS*\n\n📥 Total: ${stats.total}\n🎥 YouTube: ${stats.youtube}\n📘 Facebook: ${stats.facebook}\n📸 Instagram: ${stats.instagram}\n🎵 TikTok: ${stats.tiktok}\n\n⏱️ Last: ${stats.lastDownload ? new Date(stats.lastDownload).toLocaleString() : 'Never'}`
     await sock.sendMessage(from, { text: msg })
     return
   }
-
   /* ===============================
   PING
   ================================ */
@@ -304,7 +256,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   UPTIME
   ================================ */
@@ -318,7 +269,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   STATS
   ================================ */
@@ -329,7 +279,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   SYSTEM
   ================================ */
@@ -339,7 +288,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   ALIVE
   ================================ */
@@ -349,7 +297,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   RUNTIME
   ================================ */
@@ -363,7 +310,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   BOTINFO
   ================================ */
@@ -373,7 +319,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   OWNER
   ================================ */
@@ -383,7 +328,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   REPO
   ================================ */
@@ -393,7 +337,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   UPDATE
   ================================ */
@@ -403,7 +346,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   LOGS
   ================================ */
@@ -413,7 +355,6 @@ export async function handler(sock, msg) {
     })
     return
   }
-
   /* ===============================
   HELP
   ================================ */
@@ -421,7 +362,6 @@ export async function handler(sock, msg) {
     await sendCommandList(sock, from)
     return
   }
-
   /* ===============================
   MENU
   ================================ */
@@ -429,7 +369,6 @@ export async function handler(sock, msg) {
     await sendDownloaderMenu(sock, from)
     return
   }
-
   /* ===============================
   ADMIN PANEL
   ================================ */
@@ -447,14 +386,12 @@ export async function handler(sock, msg) {
       await sock.sendMessage(from, { text: msg })
       return
     }
-
     if (lower === "!users") {
       await sock.sendMessage(from, { 
         text: `👥 *ACTIVE USERS*\n\nTotal: ${userState.size}\nCache: ${messageCache.size}\nSubscribers: ${subscribers.size}` 
       })
       return
     }
-
     if (lower === "!adminstats") {
       const totalDownloads = [...downloadStats.values()].reduce((acc, curr) => acc + curr.total, 0)
       const msg = `📊 *BOT STATISTICS*\n\n` +
@@ -466,14 +403,12 @@ export async function handler(sock, msg) {
       await sock.sendMessage(from, { text: msg })
       return
     }
-
     if (lower.startsWith("!broadcast")) {
       const broadcastMsg = text.replace('!broadcast', '').trim()
       if (!broadcastMsg) {
         await sock.sendMessage(from, { text: "❌ Usage: !broadcast <message>" })
         return
       }
-
       let sent = 0
       for (const [user] of userState) {
         try {
@@ -486,13 +421,11 @@ export async function handler(sock, msg) {
       await sock.sendMessage(from, { text: `✅ Broadcast sent to ${sent} users` })
       return
     }
-
     if (lower === "!clearcache") {
       messageCache.clear()
       await sock.sendMessage(from, { text: "✅ Message cache cleared!" })
       return
     }
-
     if (lower === "!listadmin") {
       let msg = "👑 *ADMINS*\n\n"
       ADMIN_NUMBERS.forEach((admin, i) => {
@@ -502,7 +435,6 @@ export async function handler(sock, msg) {
       return
     }
   }
-
   /* ===============================
   UNKNOWN COMMAND + ANTI SPAM
   ================================ */
@@ -510,14 +442,12 @@ export async function handler(sock, msg) {
     if (!validCommands.includes(lower) && !adminCommands.includes(lower)) {
       let data = spamTracker.get(from) || { count: 0, blockedUntil: 0 }
       const now = Date.now()
-
       if (now < data.blockedUntil) {
         await sock.sendMessage(from, {
           text: "⛔ Too many wrong commands\nTry again in 3 seconds"
         })
         return
       }
-
       data.count++
       if (data.count >= 3) {
         data.blockedUntil = now + 3000
@@ -528,55 +458,43 @@ export async function handler(sock, msg) {
         })
         return
       }
-
       spamTracker.set(from, data)
       const suggestion = suggestCommand(lower)
-
       await sock.sendMessage(from, {
         text: `❌ Unknown command\n\nDid you mean: *${suggestion}* ?\n\nType *!help* to see command list`
       })
       return
     }
   }
-
 /* ===============================
 AUTO WELCOME + MENU
 ================================ */
 await sock.sendMessage(from, {
   disappearingMessagesInChat: 86400
 })
-
 if (text && !text.startsWith("!") && !detectPlatform(text)) {
   await sendDownloaderMenu(sock, from)
   return
 }
-
   /* ===============================
   AUTO LINK DETECT
   ================================ */
   if (text) {
     let platform = null
-    
-    // YOUTUBE
     if (/(youtube\.com|youtu\.be)/i.test(text)) {
       platform = 'youtube'
     }
-    // FACEBOOK
     else if (/facebook\.com/i.test(text)) {
       platform = 'facebook'
     }
-    // INSTAGRAM
     else if (/instagram\.com/i.test(text)) {
       platform = 'instagram'
     }
-    // TIKTOK
     else if (/tiktok\.com/i.test(text)) {
       platform = 'tiktok'
     }
-
     if (platform) {
       trackDownload(platform, from)
-      
       let downloader
       switch (platform) {
         case "youtube":
@@ -595,11 +513,9 @@ if (text && !text.startsWith("!") && !detectPlatform(text)) {
       await downloader(sock, from, text)
       return
     }
-
     const detectedPlatform = detectPlatform(text)
     if (detectedPlatform) {
       trackDownload(detectedPlatform, from)
-      
       let downloader
       switch (detectedPlatform) {
         case "youtube":
@@ -620,60 +536,18 @@ if (text && !text.startsWith("!") && !detectPlatform(text)) {
     }
   }
 }
-
 /* ===============================
 COMMAND LIST
 ================================= */
 async function sendCommandList(sock, from) {
   const isAdminUser = isAdmin(from)
-  
-  let text = `📜 *MAINUL - X DOWNLOADER BOT COMMAND LIST*
-
-*DOWNLOADER*
-!yt → Download YouTube video
-!fb → Download Facebook video
-!ig → Download Instagram video
-!tt → Download TikTok video
-
-*SYSTEM*
-!ping → Bot speed
-!uptime → Bot running time
-!stats → RAM usage
-!system → System info
-!alive → Bot status
-!runtime → Live uptime
-!botinfo → Bot information
-
-*USER*
-!owner → Contact owner
-!dev → Developer info
-!repo → GitHub repository
-!help → Command menu
-!menu → Show menu
-!subscribe → Get updates
-!unsubscribe → Stop updates
-!leaderboard → Top downloaders
-!mystats → Your download stats`
-
+  let text = `📜 *MAINUL - X DOWNLOADER BOT COMMAND LIST*\n\n*DOWNLOADER*\n!yt → Download YouTube video\n!fb → Download Facebook video\n!ig → Download Instagram video\n!tt → Download TikTok video\n\n*SYSTEM*\n!ping → Bot speed\n!uptime → Bot running time\n!stats → RAM usage\n!system → System info\n!alive → Bot status\n!runtime → Live uptime\n!botinfo → Bot information\n\n*USER*\n!owner → Contact owner\n!dev → Developer info\n!repo → GitHub repository\n!help → Command menu\n!menu → Show menu\n!subscribe → Get updates\n!unsubscribe → Stop updates\n!leaderboard → Top downloaders\n!mystats → Your download stats`
   if (isAdminUser) {
-    text += `\n\n👑 *ADMIN COMMANDS*\n` +
-      `!admin → Admin panel\n` +
-      `!users → Active users\n` +
-      `!adminstats → Bot stats\n` +
-      `!broadcast → Send to all\n` +
-      `!clearcache → Clear cache`
+    text += `\n\n👑 *ADMIN COMMANDS*\n!admin → Admin panel\n!users → Active users\n!adminstats → Bot stats\n!broadcast → Send to all\n!clearcache → Clear cache`
   }
-
-  text += `\n\n━━━━━━━━━━━━━━━━━━\n` +
-    `💡 Tip: You can send a video link directly\n` +
-    `━━━━━━━━━━━━━━━━━━\n` +
-    `👨‍💻 Developer: Md. Mainul Islam (MAINUL-X)\n` +
-    `🌐 GitHub: https://github.com/M41NUL\n` +
-    `⚡ Powered by MAINUL-X`
-
+  text += `\n\n━━━━━━━━━━━━━━━━━━\n💡 Tip: You can send a video link directly\n━━━━━━━━━━━━━━━━━━\n👨‍💻 Developer: Md. Mainul Islam (MAINUL-X)\n🌐 GitHub: https://github.com/M41NUL\n⚡ Powered by MAINUL-X`
   await sock.sendMessage(from, { text })
 }
-
 /* ===============================
 MENU UI
 ================================= */
