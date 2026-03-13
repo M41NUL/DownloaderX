@@ -7,113 +7,160 @@
  * Telegram: @mdmainulislaminfo
  * Email: githubmainul@gmail.com
  * =============================================
- * Feature: TikTok Video Downloader with Progress Bar (No Watermark)
+ * Feature: TikTok Video Downloader (No Watermark)
+ * Utility: Live Progress Bar (Message Edit)
  * =============================================
  */
 
-import fs from "fs";
-import axios from "axios";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import ytdlpExec from "yt-dlp-exec";
+import fs from "fs"
+import axios from "axios"
+import { dirname } from "path"
+import { fileURLToPath } from "url"
+import ytdlpExec from "yt-dlp-exec"
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-async function resolveTikTokUrl(url) {
-  try {
-    const response = await axios.get(url, {
-      maxRedirects: 5,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
-    return response.request?.res?.responseUrl || url;
-  } catch (err) {
-    console.error("❌ Failed to resolve TikTok URL:", err.message);
-    return url;
-  }
+async function resolveTikTokUrl(url){
+
+try{
+
+const response = await axios.get(url,{
+maxRedirects:5,
+headers:{
+"User-Agent":"Mozilla/5.0"
+}
+})
+
+return response.request?.res?.responseUrl || url
+
+}catch(err){
+
+console.log("Resolve TikTok URL error",err.message)
+return url
+
 }
 
-export async function handleTikTokDownloader(sock, from, url) {
-  if (!url.startsWith("http")) {
-    await sock.sendMessage(from, { text: "❌ Invalid URL" });
-    return;
-  }
+}
 
-  // Send initial message
-  await sock.sendMessage(from, { text: "⏳ Initializing TikTok download..." });
+export async function handleTikTokDownloader(sock,from,url){
 
-  const tempFile = `${__dirname}/tmp_tt_${Date.now()}.mp4`;
+if(!url.startsWith("http")){
 
-  try {
-    // Resolve URL
-    await sock.sendMessage(from, { text: "🔍 Processing TikTok link..." });
-    const resolvedUrl = await resolveTikTokUrl(url);
+await sock.sendMessage(from,{
+text:"❌ Invalid URL"
+})
 
-    // Progress tracking
-    let lastProgress = 0;
-    const progressInterval = setInterval(async () => {
-      if (lastProgress < 100) {
-        const progressMsg = [
-          '⏳ Downloading... 0%',
-          '🔄 25% downloaded',
-          '📥 50% downloaded',
-          '📦 75% downloaded',
-          '✅ 100% complete'
-        ][Math.floor(lastProgress / 25)];
-        
-        if (lastProgress % 25 === 0 && lastProgress < 100) {
-          await sock.sendMessage(from, { text: progressMsg });
-        }
-        lastProgress += 25;
-      }
-    }, 2000);
+return
 
-    // Download video
-    await ytdlpExec(resolvedUrl, {
-      output: tempFile,
-      format: "bv*[height<=1080]+ba/bv*+ba/best",
-      quiet: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-    });
+}
 
-    clearInterval(progressInterval);
-    await sock.sendMessage(from, { text: "✅ Download complete! Now sending video..." });
+const tempFile = `${__dirname}/tmp_tt_${Date.now()}.mp4`
 
-    // Check if file exists
-    if (!fs.existsSync(tempFile)) {
-      throw new Error('Download failed - file not created');
-    }
+try{
 
-    // Get file size
-    const stats = fs.statSync(tempFile);
-    const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+/* ===============================
+START MESSAGE
+================================ */
 
-    // Send video to WhatsApp
-    await sock.sendMessage(from, {
-      video: fs.readFileSync(tempFile),
-      mimetype: "video/mp4",
-      caption: `🎵 *TikTok Video Downloaded!*\n━━━━━━━━━━━━━━━━━━━━━\n💧 *No Watermark*\n📦 *Size:* ${fileSizeMB} MB\n🔗 *Source:* TikTok\n━━━━━━━━━━━━━━━━━━━━━\n⚡ Powered by MAINUL-X`
-    });
+const progressMsg = await sock.sendMessage(from,{
+text:"⏳ Processing... 0%"
+})
 
-    fs.unlinkSync(tempFile);
-    console.log(`✅ TikTok video downloaded and sent: ${url}`);
+/* ===============================
+LIVE PROGRESS BAR
+================================ */
 
-  } catch (err) {
-    console.error("❌ TikTok Download Error:", err);
-    
-    let errorMsg = "❌ Failed to download TikTok video.";
-    if (err.message.includes('Private')) {
-      errorMsg = "❌ This TikTok video is private or unavailable.";
-    }
-    
-    await sock.sendMessage(from, { text: errorMsg });
+let progress = 0
 
-    // Clean up temp file if exists
-    if (fs.existsSync(tempFile)) {
-      fs.unlinkSync(tempFile);
-    }
-  }
+const progressInterval = setInterval(async()=>{
+
+progress += 10
+
+if(progress <= 90){
+
+await sock.sendMessage(from,{
+text:`⏳ Processing... ${progress}%`,
+edit:progressMsg.key
+})
+
+}
+
+},1500)
+
+/* ===============================
+RESOLVE LINK
+================================ */
+
+const resolvedUrl = await resolveTikTokUrl(url)
+
+/* ===============================
+DOWNLOAD VIDEO
+================================ */
+
+await ytdlpExec(resolvedUrl,{
+output:tempFile,
+format:"bv*[height<=1080]+ba/bv*+ba/best",
+quiet:true,
+noWarnings:true,
+preferFreeFormats:true
+})
+
+clearInterval(progressInterval)
+
+/* ===============================
+FINAL 100%
+================================ */
+
+await sock.sendMessage(from,{
+text:"✅ Processing... 100%",
+edit:progressMsg.key
+})
+
+/* ===============================
+CHECK FILE
+================================ */
+
+if(!fs.existsSync(tempFile)){
+throw new Error("Download failed")
+}
+
+const stats = fs.statSync(tempFile)
+const fileSizeMB = (stats.size/(1024*1024)).toFixed(2)
+
+/* ===============================
+SEND VIDEO
+================================ */
+
+await sock.sendMessage(from,{
+video:fs.readFileSync(tempFile),
+mimetype:"video/mp4",
+caption:`🎵 *TikTok Video Downloaded!*
+
+━━━━━━━━━━━━━━━━━━━━━
+💧 No Watermark
+📦 Size : ${fileSizeMB} MB
+🔗 Source : TikTok
+━━━━━━━━━━━━━━━━━━━━━
+⚡ Powered by MAINUL-X`
+})
+
+fs.unlinkSync(tempFile)
+
+console.log("TikTok video sent")
+
+}catch(err){
+
+console.log("TikTok download error",err.message)
+
+await sock.sendMessage(from,{
+text:"❌ Failed to download TikTok video."
+})
+
+if(fs.existsSync(tempFile)){
+fs.unlinkSync(tempFile)
+}
+
+}
+
 }
