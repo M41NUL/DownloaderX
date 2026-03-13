@@ -14,25 +14,28 @@
 
 /**
  * URL validation patterns for different platforms
+ * UPDATED: Short links support added
  */
 const URL_PATTERNS = {
   /**
    * YouTube URL patterns:
    * - youtube.com/watch?v=xxxx
-   * - youtu.be/xxxx
+   * - youtu.be/xxxx (short link)
    * - youtube.com/shorts/xxxx
    * - youtube.com/embed/xxxx
+   * - m.youtube.com/xxxx
    */
-  youtube: /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/(watch\?v=|shorts\/|embed\/)?[a-zA-Z0-9_-]{11}(&.*)?$/,
+  youtube: /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.be)\/(watch\?v=|shorts\/|embed\/)?[a-zA-Z0-9_-]{6,}/i,
 
   /**
    * Facebook URL patterns:
    * - facebook.com/watch?v=xxxx
    * - facebook.com/username/videos/xxxx
-   * - fb.watch/xxxx
+   * - fb.watch/xxxx (short link)
    * - facebook.com/reel/xxxx
+   * - m.facebook.com/xxxx
    */
-  facebook: /^(https?:\/\/)?(www\.|m\.)?(facebook\.com|fb\.watch)\/(watch\?v=|reel\/|[a-zA-Z0-9._-]+\/videos\/|[a-zA-Z0-9._-]+\?v=)?[a-zA-Z0-9._-]+/,
+  facebook: /^(https?:\/\/)?(www\.|m\.)?(facebook\.com|fb\.watch)\/.+/i,
 
   /**
    * Instagram URL patterns:
@@ -41,17 +44,17 @@ const URL_PATTERNS = {
    * - instagram.com/tv/xxxx
    * - instagram.com/stories/username/xxxx
    */
-  instagram: /^(https?:\/\/)?(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+(\/)?(\?.*)?$/,
+  instagram: /^(https?:\/\/)?(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+/i,
 
   /**
    * TikTok URL patterns:
    * - tiktok.com/@username/video/xxxx
    * - tiktok.com/v/xxxx
-   * - m.tiktok.com/v/xxxx
-   * - vt.tiktok.com/xxxx
+   * - m.tiktok.com/xxxx
+   * - vt.tiktok.com/xxxx (short link)
    * - tiktok.com/t/xxxx
    */
-  tiktok: /^(https?:\/\/)?((www|m|vt|t)\.)?tiktok\.com\/(@[a-zA-Z0-9_.]+\/video\/|[a-zA-Z0-9]+\/)?[a-zA-Z0-9_-]+(\/)?(\?.*)?$/
+  tiktok: /^(https?:\/\/)?((www|m|vt|t)\.)?tiktok\.com\/.+/i
 };
 
 /**
@@ -72,8 +75,14 @@ export function validateUrl(url, platform) {
     return false;
   }
 
-  // Trim whitespace and test
-  const trimmedUrl = url.trim();
+  // Trim whitespace
+  let trimmedUrl = url.trim();
+  
+  // Add https:// if missing
+  if (!trimmedUrl.startsWith("http")) {
+    trimmedUrl = "https://" + trimmedUrl;
+  }
+
   const isValid = URL_PATTERNS[platform].test(trimmedUrl);
 
   if (!isValid) {
@@ -91,7 +100,13 @@ export function validateUrl(url, platform) {
 export function detectPlatform(url) {
   if (typeof url !== "string") return null;
   
-  const trimmedUrl = url.trim();
+  // Trim whitespace
+  let trimmedUrl = url.trim();
+  
+  // Add https:// if missing
+  if (!trimmedUrl.startsWith("http")) {
+    trimmedUrl = "https://" + trimmedUrl;
+  }
   
   for (const [platform, pattern] of Object.entries(URL_PATTERNS)) {
     if (pattern.test(trimmedUrl)) {
@@ -108,4 +123,32 @@ export function detectPlatform(url) {
  */
 export function getSupportedPlatforms() {
   return Object.keys(URL_PATTERNS);
+}
+
+/**
+ * NEW: Extract video ID from URL
+ * @param {string} url - The URL
+ * @param {string} platform - Platform name
+ * @returns {string|null} - Video ID or null
+ */
+export function extractVideoId(url, platform) {
+  if (!validateUrl(url, platform)) return null;
+  
+  let trimmedUrl = url.trim();
+  if (!trimmedUrl.startsWith("http")) {
+    trimmedUrl = "https://" + trimmedUrl;
+  }
+  
+  switch (platform) {
+    case 'youtube':
+      const ytMatch = trimmedUrl.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
+      return ytMatch ? ytMatch[1] : null;
+      
+    case 'instagram':
+      const igMatch = trimmedUrl.match(/\/(p|reel|tv)\/([a-zA-Z0-9_-]+)/);
+      return igMatch ? igMatch[2] : null;
+      
+    default:
+      return null;
+  }
 }
