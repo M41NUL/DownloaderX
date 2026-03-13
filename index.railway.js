@@ -13,7 +13,7 @@ import path from "path"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
-import { setBotProfile } from "./src/utils/profile.js"   // ✅ NEW
+import { setBotProfile } from "./src/utils/profile.js"
 
 import { WA_NUMBER } from "./config/number.js"
 
@@ -56,17 +56,11 @@ AUTH STATE
 const { state, saveCreds } = await useMultiFileAuthState(authDir)
 
 const sock = makeWASocket({
-
 auth: state,
-
 logger: pino({ level:"silent" }),
-
 printQRInTerminal:false,
-
 markOnlineOnConnect:true,
-
 syncFullHistory:false
-
 })
 
 wrapSendMessageGlobally(sock)
@@ -109,9 +103,7 @@ sock.ev.on("connection.update", async (update)=>{
 const { connection, lastDisconnect } = update
 
 if(connection === "connecting"){
-
 console.log("🔄 Connecting to WhatsApp...")
-
 }
 
 if(connection === "open"){
@@ -119,11 +111,7 @@ if(connection === "open"){
 console.log("✅ Bot Connected Successfully")
 console.log("🤖 MAINUL - X DOWNLOADER BOT Running")
 
-/* =========================
-SET BOT PROFILE
-========================= */
-
-await setBotProfile(sock)   // ✅ NEW
+await setBotProfile(sock)
 
 }
 
@@ -185,4 +173,4 @@ console.log("Handler Error:",err)
 
 }
 
-startBot()j
+startBot()
