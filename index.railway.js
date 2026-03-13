@@ -13,8 +13,6 @@ import path from "path"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
-import { setBotProfile } from "./src/utils/profile.js"
-
 import { WA_NUMBER } from "./config/number.js"
 
 /* =========================
@@ -111,8 +109,6 @@ if(connection === "open"){
 console.log("✅ Bot Connected Successfully")
 console.log("🤖 MAINUL - X DOWNLOADER BOT Running")
 
-await setBotProfile(sock)
-
 }
 
 if(connection === "close"){
@@ -157,7 +153,6 @@ const msg = m.messages?.[0]
 if(!msg) return
 if(!msg.message) return
 if(msg.key.fromMe) return
-if(m.type !== "notify") return
 
 messagesProcessed++
 
