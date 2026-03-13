@@ -11,7 +11,6 @@
 
 process.stdout.write("\x1Bc");
 
-// MaxListeners warning fix
 import { setMaxListeners } from 'events';
 setMaxListeners(50);
 
@@ -38,13 +37,14 @@ console.log(chalk.yellow('║') + chalk.green('   WhatsApp Media Downloader Bot 
 console.log(chalk.yellow('║') + chalk.blue('        Created by MAINUL-X 🇧🇩') + chalk.yellow('         ║'));
 console.log(chalk.yellow('╚══════════════════════════════════════════╝\n'));
 
-let sock = null; // Global socket reference
+let sock = null;
+let reconnectTimer = null;
 
 async function startBot() {
   try {
-    // Clear previous listeners if socket exists
-    if (sock) {
-      sock.ev.removeAllListeners();
+    // Clear previous timer
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -55,14 +55,23 @@ async function startBot() {
       printQRInTerminal: false,
       browser: ['Ubuntu', 'Chrome', '120.0.0'],
       syncFullHistory: false,
-      markOnlineOnConnect: false
+      markOnlineOnConnect: false,
+      connectTimeoutMs: 60000  // 60 second timeout
     });
 
+    // Check session first
+    const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
+    const hasSession = files.length > 0;
+
+    if (hasSession) {
+      console.log(chalk.green('✅ Existing session found. Connecting...\n'));
+    }
+
     // Handle connection updates
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
       
-      if (qr) {
+      if (qr && !hasSession) {
         console.log(chalk.yellow('\n📱 Scan this QR code with WhatsApp:\n'));
         qrcode.generate(qr, { small: true });
       }
@@ -71,125 +80,108 @@ async function startBot() {
         console.log(chalk.green('\n✅ Connected to WhatsApp successfully!'));
         console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
         console.log(chalk.magenta('⚡ Bot is ready! Send any video link.\n'));
+        
+        // Show menu after successful connection
+        await showMainMenu(sock);
       }
       
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
-        const reason = lastDisconnect?.error?.message || 'Unknown';
         
-        console.log(chalk.red(`\n❌ Disconnected: ${reason} (Code: ${statusCode})`));
+        console.log(chalk.red(`\n❌ Disconnected (Code: ${statusCode})`));
         
         if (statusCode === 405) {
-          console.log(chalk.yellow('⏳ Waiting 10 seconds before reconnect...\n'));
-          setTimeout(() => {
+          console.log(chalk.yellow('⏳ Waiting 30 seconds before reconnect...\n'));
+          reconnectTimer = setTimeout(() => {
             console.log(chalk.cyan('🔄 Attempting to reconnect...\n'));
             startBot();
-          }, 10000);
+          }, 30000);
         } else if (statusCode === 401) {
-          console.log(chalk.red('❌ Logged out. Please delete session folder.\n'));
+          console.log(chalk.red('❌ Logged out. Delete session folder and restart.\n'));
+          fs.rmSync(authDir, { recursive: true, force: true });
         } else {
-          console.log(chalk.yellow('🔄 Reconnecting in 5 seconds...\n'));
-          setTimeout(() => {
+          console.log(chalk.yellow('🔄 Reconnecting in 10 seconds...\n'));
+          reconnectTimer = setTimeout(() => {
             startBot();
-          }, 5000);
+          }, 10000);
         }
       }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Check session and show menu
-    const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
-    
-    if (files.length === 0) {
+    // If no session, show login menu
+    if (!hasSession) {
       await showLoginMenu(sock);
-    } else {
-      console.log(chalk.green('✅ Existing session found. Connecting...\n'));
     }
 
   } catch (err) {
     console.error(chalk.red('\n❌ Fatal error:'), err.message);
-    console.log(chalk.yellow('🔄 Restarting in 5 seconds...\n'));
-    setTimeout(() => {
+    reconnectTimer = setTimeout(() => {
       startBot();
-    }, 5000);
+    }, 10000);
   }
 }
 
 async function showLoginMenu(sock) {
-  console.log(chalk.cyan('\n📋 LOGIN METHOD SELECTION'));
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━'));
+  console.log(chalk.cyan('\n📋 LOGIN METHOD'));
+  console.log(chalk.cyan('━━━━━━━━━━━━━━━━'));
   console.log('  [1] 📱 QR Code');
   console.log('  [2] 🔢 Pairing Code');
-  console.log('  [3] ℹ️  Developer Info');
+  console.log('  [3] ℹ️  Info');
   console.log('  [4] 🚪 Exit');
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+  console.log(chalk.cyan('━━━━━━━━━━━━━━━━\n'));
 
   const { choice } = await inquirer.prompt([
     {
       type: 'input',
       name: 'choice',
-      message: 'Enter your choice (1-4):',
-      validate: (input) => {
-        const num = parseInt(input);
-        return (num >= 1 && num <= 4) ? true : 'Please enter 1-4';
-      }
+      message: 'Enter choice (1-4):',
+      validate: (input) => /^[1-4]$/.test(input)
     }
   ]);
 
   if (choice === '1') {
-    console.log(chalk.green('\n✅ QR Code selected. Waiting for QR...\n'));
-    // QR will show automatically
+    console.log(chalk.green('\n✅ QR Code selected. Waiting...\n'));
   }
   else if (choice === '2') {
     const { number } = await inquirer.prompt([
       {
         type: 'input',
         name: 'number',
-        message: 'Enter WhatsApp number (Ex: 88017XXXXXXXX):',
-        validate: (input) => {
-          const clean = input.replace(/\D/g, '');
-          return clean.length >= 10 ? true : 'Invalid number!';
-        }
+        message: 'Enter WhatsApp number (Ex: 88017...):',
+        validate: (input) => /^\d{10,}$/.test(input.replace(/\D/g, ''))
       }
     ]);
     
-    const cleanNumber = number.replace(/\D/g, '');
-    
     try {
-      console.log(chalk.yellow('\n⏳ Requesting pairing code...'));
-      const code = await sock.requestPairingCode(cleanNumber);
-      console.log(chalk.greenBright('\n✅ Your 8-digit pairing code:'));
-      console.log(chalk.bold.magenta(`\n   ${code}\n`));
-      console.log(chalk.cyan('Open WhatsApp > Linked Devices > Link a Device'));
-      console.log(chalk.cyan('Select "Link with phone number" and enter the code\n'));
-    } catch (err) {
-      console.log(chalk.red('\n❌ Failed to get pairing code.'));
-      console.log(chalk.yellow('Use QR code instead.\n'));
+      console.log(chalk.yellow('\n⏳ Getting pairing code...'));
+      const code = await sock.requestPairingCode(number.replace(/\D/g, ''));
+      console.log(chalk.greenBright('\n✅ Pairing Code:'), chalk.bold.magenta(code));
+    } catch {
+      console.log(chalk.red('\n❌ Failed. Use QR code.'));
       await showLoginMenu(sock);
     }
   }
   else if (choice === '3') {
-    console.log(chalk.cyan('\n━━━━━━━━━━━━━━━━━━━━━━━━'));
-    console.log(chalk.yellow('   👑 MAINUL-X'));
-    console.log(chalk.green('   WhatsApp Downloader Bot'));
-    console.log(chalk.blue('   Version: 1.0.0'));
-    console.log(chalk.magenta('   GitHub: @M41NUL'));
-    console.log(chalk.cyan('   🇧🇩 From Bangladesh'));
-    console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+    console.log(chalk.cyan('\n👑 MAINUL-X v1.0 🇧🇩\n'));
     await showLoginMenu(sock);
   }
   else {
-    console.log(chalk.yellow('\n👋 Goodbye!\n'));
+    console.log(chalk.yellow('\n👋 Bye!\n'));
     process.exit(0);
   }
 }
 
+async function showMainMenu(sock) {
+  // This will be called after successful connection
+  console.log(chalk.green('📱 Bot is active!'));
+}
+
 process.on('SIGINT', () => {
   console.log(chalk.yellow('\n\n👋 Shutting down...\n'));
-  if (sock) {
-    sock.end();
-  }
+  if (sock) sock.end();
+  if (reconnectTimer) clearTimeout(reconnectTimer);
   process.exit(0);
 });
 
