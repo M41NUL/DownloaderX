@@ -14,7 +14,8 @@ process.stdout.write("\x1Bc");
 import { setMaxListeners } from 'events';
 setMaxListeners(50);
 
-import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from 'atexovi-baileys';
+// লাইন ১৪-১৫ এটা দিয়ে replace করুন
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from 'atexovi-baileys';
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
@@ -193,3 +194,4 @@ process.on('SIGINT', () => {
 });
 
 startBot();
+
