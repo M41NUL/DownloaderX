@@ -1,444 +1,1279 @@
 /**
- * =============================================
- *      MAINUL-X WhatsApp Media Downloader
- * =============================================
- * Author: Md. Mainul Islam (MAINUL-X)
- * GitHub: https://github.com/M41NUL
- * Telegram: @mdmainulislaminfo
- * Email: githubmainul@gmail.com
- * BOT NAME : MAINUL - X DOWNLOADER BOT
- * =============================================
- */
+
+=============================================
+
+MAINUL-X WhatsApp Media Downloader
+
+Author: Md. Mainul Islam (MAINUL-X)
+
+GitHub: https://github.com/M41NUL
+
+Telegram: @mdmainulislaminfo
+
+Email: githubmainul@gmail.com
+
+BOT NAME : MAINUL - X DOWNLOADER BOT
+=============================================
+
+*/
+
+
 
 import fs from "fs"
+
 import path from "path"
+
 import os from "os"
+
 import { userState } from "./userState.js"
+
 import { handleYouTubeDownloader } from "./features/youtube.js"
+
 import { handleFacebookDownloader } from "./features/facebook.js"
+
 import { handleInstagramDownloader } from "./features/instagram.js"
+
 import { handleTikTokDownloader } from "./features/tiktok.js"
+
 import { validateUrl, detectPlatform } from "./utils/validateUrl.js"
+
 import {
-  BOT_NAME,
-  VERSION,
-  OWNER_NAME,
-  OWNER_ALIAS,
-  WHATSAPP,
-  TELEGRAM,
-  GITHUB_URL,
-  EMAIL_PRIMARY,
-  EMAIL_SECONDARY,
-  LICENSE,
-  COPYRIGHT
+BOT_NAME,
+VERSION,
+OWNER_NAME,
+OWNER_ALIAS,
+WHATSAPP,
+TELEGRAM,
+GITHUB_URL,
+EMAIL_PRIMARY,
+EMAIL_SECONDARY
 } from "../config/bot.js"
 
-const menuImagePath = path.join(process.cwd(), "src/assets/menu.jpg")
-const youtubeImage = path.join(process.cwd(), "src/assets/youtube.png")
-const facebookImage = path.join(process.cwd(), "src/assets/facebook.png")
-const instagramImage = path.join(process.cwd(), "src/assets/instagram.png")
-const tiktokImage = path.join(process.cwd(), "src/assets/tiktok.png")
+
+const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
+
+const youtubeImage = path.join(process.cwd(),"src/assets/youtube.png")
+
+const facebookImage = path.join(process.cwd(),"src/assets/facebook.png")
+
+const instagramImage = path.join(process.cwd(),"src/assets/instagram.png")
+
+const tiktokImage = path.join(process.cwd(),"src/assets/tiktok.png")
+
+
 
 const BOT_START_TIME = Date.now()
+
+
+
 const messageCache = new Set()
+
 const spamTracker = new Map()
 
-/* ===============================
-CACHE CLEANER
-================================ */
-setInterval(() => {
-  messageCache.clear()
-}, 30000)
+
 
 /* ===============================
-COMMAND LIST
+
+CACHE CLEANER
+
 ================================ */
+
+
+
+setInterval(()=>{
+
+messageCache.clear()
+
+},30000)
+
+
+
+/* ===============================
+
+COMMAND LIST
+
+================================ */
+
+
+
 const validCommands = [
-  "!yt", "!fb", "!ig", "!tt",
-  "!ping", "!uptime", "!stats", "!system",
-  "!alive", "!runtime", "!botinfo",
-  "!owner", "!dev", "!repo",
-  "!update", "!restart", "!logs",
-  "!help", "!menu"
+
+
+
+"!yt","!fb","!ig","!tt",
+
+
+
+"!ping","!uptime","!stats","!system",
+
+
+
+"!alive","!runtime","!botinfo",
+
+
+
+"!owner","!dev","!repo",
+
+
+
+"!update","!restart","!logs",
+
+
+
+"!help","!menu"
+
+
+
 ]
 
-function suggestCommand(input) {
-  let best = null
-  let score = 0
-  for (const cmd of validCommands) {
-    let match = 0
-    for (let i = 0; i < input.length; i++) {
-      if (cmd[i] === input[i]) match++
-    }
-    if (match > score) {
-      score = match
-      best = cmd
-    }
-  }
-  return best
+
+
+function suggestCommand(input){
+
+
+
+let best=null
+
+let score=0
+
+
+
+for(const cmd of validCommands){
+
+
+
+let match=0
+
+
+
+for(let i=0;i<input.length;i++){
+
+
+
+if(cmd[i]===input[i]) match++
+
+
+
 }
+
+
+
+if(match>score){
+
+
+
+score=match
+
+best=cmd
+
+
+
+}
+
+
+
+}
+
+
+
+return best
+
+
+
+}
+
+
 
 /* =================================
+
 HANDLER
+
 ================================= */
-export async function handler(sock, msg) {
-  // ✅ FIX 1: Check if msg exists, not msg.message
-  if (!msg) return
 
-  if (messageCache.has(msg.key?.id)) return
-  messageCache.add(msg.key?.id)
 
-  const from = msg.key?.remoteJid
-  if (!from) return
 
-  const state = userState.get(from) || { step: "start" }
+export async function handler(sock,msg){
 
-  const text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    msg.message?.videoMessage?.caption ||
-    ""
 
-  // ✅ FIX 2: Safe lowercase conversion
-  const lower = (text || "").toLowerCase()
 
-  /* ===============================
-  PING
-  ================================ */
-  if (lower === "!ping") {
-    const start = Date.now()
-    const pingMsg = await sock.sendMessage(from, { text: "🏓 Pinging..." })
-    const end = Date.now()
-    await sock.sendMessage(from, {
-      text: `⚡ Pong\nResponse: ${end - start} ms`,
-      edit: pingMsg.key
-    })
-    return
-  }
+if(!msg?.message) return
 
-  /* ===============================
-  UPTIME
-  ================================ */
-  if (lower === "!uptime") {
-    const uptime = Math.floor((Date.now() - BOT_START_TIME) / 1000)
-    const h = Math.floor(uptime / 3600)
-    const m = Math.floor((uptime % 3600) / 60)
-    const s = uptime % 60
-    await sock.sendMessage(from, {
-      text: `⏱ BOT UPTIME\n\n${h}h ${m}m ${s}s`
-    })
-    return
-  }
 
-  /* ===============================
-  STATS
-  ================================ */
-  if (lower === "!stats") {
-    const ram = Math.round(process.memoryUsage().rss / 1024 / 1024)
-    await sock.sendMessage(from, {
-      text: `📊 BOT STATS\n\nRAM Usage : ${ram} MB\nPlatform : Node.js\nStatus : Online`
-    })
-    return
-  }
 
-  /* ===============================
-  SYSTEM
-  ================================ */
-  if (lower === "!system") {
-    await sock.sendMessage(from, {
-      text: `⚙ SYSTEM INFO\n\nOS : ${os.platform()}\nCPU : ${os.cpus().length} cores\nRAM : ${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB\nNode : ${process.version}`
-    })
-    return
-  }
+if(messageCache.has(msg.key.id)) return
 
-  /* ===============================
-  ALIVE
-  ================================ */
-  if (lower === "!alive") {
-    await sock.sendMessage(from, {
-      text: `🤖 MAINUL - X DOWNLOADER BOT\n\nStatus : Online\nSystem : Running\nConnection : Stable`
-    })
-    return
-  }
+messageCache.add(msg.key.id)
 
-  /* ===============================
-  RUNTIME
-  ================================ */
-  if (lower === "!runtime") {
-    const runtime = process.uptime()
-    const h = Math.floor(runtime / 3600)
-    const m = Math.floor((runtime % 3600) / 60)
-    const s = Math.floor(runtime % 60)
-    await sock.sendMessage(from, {
-      text: `⏱ RUNTIME\n\n${h}h ${m}m ${s}s`
-    })
-    return
-  }
 
-  /* ===============================
-  BOTINFO
-  ================================ */
-  if (lower === "!botinfo") {
-    await sock.sendMessage(from, {
-      text: `🤖 BOT INFO\n\nName : ${BOT_NAME}\nVersion : v${VERSION}\nPlatform : WhatsApp MD\nDeveloper : ${OWNER_ALIAS}`
-    })
-    return
-  }
 
-  /* ===============================
-  OWNER
-  ================================ */
-  if (lower === "!owner") {
-    await sock.sendMessage(from, {
-      text: `👨‍💻 BOT OWNER\n\nName : ${OWNER_NAME}\nAlias : ${OWNER_ALIAS}\n📱 WhatsApp\n${WHATSAPP}\n🌐 GitHub\n${GITHUB_URL}\n📢 Telegram\n${TELEGRAM}`
-    })
-    return
-  }
+const from = msg.key.remoteJid
 
-  /* ===============================
-  DEV
-  ================================ */
-  if (lower === "!dev") {
-    await sock.sendMessage(from, {
-      text: `👨‍💻 Developer Information\n\nName : ${OWNER_NAME}\nAlias : ${OWNER_ALIAS}\n📱 WhatsApp\n${WHATSAPP}\n🌐 GitHub\n${GITHUB_URL}\n📢 Telegram\nhttps://t.me/${TELEGRAM.replace("@", "")}\n📧 Email\n${EMAIL_PRIMARY}\n${EMAIL_SECONDARY}\n📜 License\n${LICENSE}\n© ${COPYRIGHT}`
-    })
-    return
-  }
 
-  /* ===============================
-  REPO
-  ================================ */
-  if (lower === "!repo") {
-    await sock.sendMessage(from, {
-      text: `🌐 GitHub Repository\n\nMAINUL - X DOWNLOADER BOT\nhttps://github.com/M41NUL/DownloaderX`
-    })
-    return
-  }
 
-  /* ===============================
-  UPDATE
-  ================================ */
-  if (lower === "!update") {
-    await sock.sendMessage(from, {
-      text: `🔄 BOT UPDATE\n\nCurrent Version : v1.0\nCheck latest updates here:\nhttps://github.com/M41NUL/DownloaderX\n\nDeveloper : MAINUL - X`
-    })
-    return
-  }
+const state = userState.get(from) || {step:"start"}
 
-  /* ===============================
-  LOGS
-  ================================ */
-  if (lower === "!logs") {
-    await sock.sendMessage(from, {
-      text: `📄 BOT LOGS\n\nStatus : Running\nErrors : None detected\nSystem : Stable\n\nTip:\nCheck server console for detailed logs.`
-    })
-    return
-  }
 
-  /* ===============================
-  HELP
-  ================================ */
-  if (lower === "!help") {
-    await sendCommandList(sock, from)
-    return
-  }
 
-  /* ===============================
-  MENU
-  ================================ */
-  if (lower === "!menu") {
-    await sendDownloaderMenu(sock, from)
-    return
-  }
+const text =
 
-  /* ===============================
-  UNKNOWN COMMAND + ANTI SPAM
-  ================================ */
-  if (text && text.startsWith("!")) {
-    if (!validCommands.includes(lower)) {
-      let data = spamTracker.get(from) || { count: 0, blockedUntil: 0 }
-      const now = Date.now()
+msg.message?.conversation ||
 
-      if (now < data.blockedUntil) {
-        await sock.sendMessage(from, {
-          text: "⛔ Too many wrong commands\nTry again in 3 seconds"
-        })
-        return
-      }
+msg.message?.extendedTextMessage?.text ||
 
-      data.count++
-      if (data.count >= 3) {
-        data.blockedUntil = now + 3000
-        data.count = 0
-        spamTracker.set(from, data)
-        await sock.sendMessage(from, {
-          text: "🚫 Command spam detected\nUser suspended for 3 seconds"
-        })
-        return
-      }
+msg.message?.imageMessage?.caption ||
 
-      spamTracker.set(from, data)
-      const suggestion = suggestCommand(lower)
+msg.message?.videoMessage?.caption
 
-      await sock.sendMessage(from, {
-        text: `❌ Unknown command\n\nDid you mean: ${suggestion} ?\n\nType !help to see command list`
-      })
-      return
-    }
-  }
 
-  /* ===============================
-  AUTO WELCOME + MENU
-  ================================ */
-  await sock.sendMessage(from, {
-    disappearingMessagesInChat: 86400
-  })
 
-  if (text && !text.startsWith("!") && !detectPlatform(text)) {
-    await sock.sendMessage(from, {
-      text: `👋 Welcome to MAINUL - X DOWNLOADER BOT\n\nSend a video link directly or choose a platform below.\n\n📥 Supported Platforms\n• YouTube\n• Facebook\n• Instagram\n• TikTok\n\n💡 Commands\nType !help to see all bot commands`
-    })
-    await sendDownloaderMenu(sock, from)
-    return
-  }
+const lower = text?.toLowerCase()
 
-  /* ===============================
-  AUTO LINK DETECT
-  ================================ */
-  if (text) {
-    /* ---- YOUTUBE SHORTS ---- */
-    const ytShorts = /youtube\.com\/shorts\//i
-    if (ytShorts.test(text)) {
-      await handleYouTubeDownloader(sock, from, text)
-      return
-    }
 
-    /* ---- YOUTUBE FIX ---- */
-    const ytRegex = /(youtube\.com|youtu\.be)/i
-    if (ytRegex.test(text)) {
-      await handleYouTubeDownloader(sock, from, text)
-      return
-    }
-
-    /* ---- INSTAGRAM REEL ---- */
-    const igReel = /instagram\.com\/reel\//i
-    if (igReel.test(text)) {
-      await handleInstagramDownloader(sock, from, text)
-      return
-    }
-
-    /* ---- FACEBOOK REEL ---- */
-    const fbReel = /facebook\.com\/reel\//i
-    if (fbReel.test(text)) {
-      await handleFacebookDownloader(sock, from, text)
-      return
-    }
-
-    /* ---- TIKTOK VIDEO ---- */
-    const ttVideo = /tiktok\.com\/.*\/video\//i
-    if (ttVideo.test(text)) {
-      await handleTikTokDownloader(sock, from, text)
-      return
-    }
-
-    const platform = detectPlatform(text)
-    if (platform) {
-      let downloader
-      switch (platform) {
-        case "youtube":
-          downloader = handleYouTubeDownloader
-          break
-        case "facebook":
-          downloader = handleFacebookDownloader
-          break
-        case "instagram":
-          downloader = handleInstagramDownloader
-          break
-        case "tiktok":
-          downloader = handleTikTokDownloader
-          break
-      }
-      await downloader(sock, from, text)
-      return
-    }
-  }
-}
 
 /* ===============================
-COMMAND LIST
-================================= */
-async function sendCommandList(sock, from) {
-  const text = `📜 MAINUL - X DOWNLOADER BOT COMMAND LIST
 
-!yt → Download YouTube video
-!fb → Download Facebook video
-!ig → Download Instagram video
-!tt → Download TikTok video
-!ping → Bot speed
-!uptime → Bot running time
-!stats → RAM usage
-!system → System info
-!alive → Bot status
-!runtime → Live uptime
-!botinfo → Bot information
-!owner → Contact owner
-!dev → Developer info
-!repo → GitHub repository
-!update → Bot update
-!restart → Restart bot
-!logs → Error logs
-!help → Command menu
+PING
 
-━━━━━━━━━━━━━━━━━━
-💡 Tip:
-You can send a video link directly
-without using commands.
-━━━━━━━━━━━━━━━━━━
-👨‍💻 Developer
-Md. Mainul Islam (MAINUL-X)
+================================ */
+
+
+
+if(lower==="!ping"){
+
+
+
+const start = Date.now()
+
+
+
+const pingMsg = await sock.sendMessage(from,{text:"🏓 Pinging..."})
+
+
+
+const end = Date.now()
+
+
+
+await sock.sendMessage(from,{
+
+text:`⚡ Pong\nResponse: ${end-start} ms`,
+
+edit:pingMsg.key
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+UPTIME
+
+================================ */
+
+
+
+if(lower==="!uptime"){
+
+
+
+const uptime = Math.floor((Date.now()-BOT_START_TIME)/1000)
+
+
+
+const h = Math.floor(uptime/3600)
+
+const m = Math.floor((uptime%3600)/60)
+
+const s = uptime%60
+
+
+
+await sock.sendMessage(from,{
+
+text:`⏱ BOT UPTIME\n\n${h}h ${m}m ${s}s`
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+STATS
+
+================================ */
+
+
+
+if(lower==="!stats"){
+
+
+
+const ram = Math.round(process.memoryUsage().rss/1024/1024)
+
+
+
+await sock.sendMessage(from,{
+
+text:`📊 BOT STATS
+
+
+
+RAM Usage : ${ram} MB
+
+Platform : Node.js
+
+Status : Online`
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+SYSTEM
+
+================================ */
+
+
+
+if(lower==="!system"){
+
+
+
+await sock.sendMessage(from,{
+
+text:`⚙ SYSTEM INFO
+
+
+
+OS : ${os.platform()}
+
+CPU : ${os.cpus().length} cores
+
+RAM : ${(os.totalmem()/1024/1024/1024).toFixed(2)} GB
+
+Node : ${process.version}`
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+ALIVE
+
+================================ */
+
+
+
+if(lower==="!alive"){
+
+
+
+await sock.sendMessage(from,{
+
+text:`🤖 MAINUL - X DOWNLOADER BOT
+
+
+
+Status : Online
+
+System : Running
+
+Connection : Stable`
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+RUNTIME
+
+================================ */
+
+
+
+if(lower==="!runtime"){
+
+
+
+const runtime = process.uptime()
+
+
+
+const h = Math.floor(runtime/3600)
+
+const m = Math.floor((runtime%3600)/60)
+
+const s = Math.floor(runtime%60)
+
+
+
+await sock.sendMessage(from,{
+
+text:`⏱ RUNTIME
+
+
+
+${h}h ${m}m ${s}s`
+
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+BOTINFO
+
+================================ */
+
+
+
+if(lower==="!botinfo"){
+
+
+
+await sock.sendMessage(from,{
+
+text:`🤖 BOT INFO
+
+Name : ${BOT_NAME}
+Version : v${VERSION}
+Platform : WhatsApp MD
+Developer : ${OWNER_ALIAS}
+`
+})
+
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+OWNER
+
+================================ */
+
+
+
+if(lower==="!owner"){
+
+
+
+await sock.sendMessage(from,{
+
+text:`👨‍💻 BOT OWNER
+
+Name : ${OWNER_NAME}
+Alias : ${OWNER_ALIAS}
+
+📱 WhatsApp
+${WHATSAPP}
 
 🌐 GitHub
-https://github.com/M41NUL
+${GITHUB_URL}
 
-⚡ Powered by MAINUL-X`
+📢 Telegram
+${TELEGRAM}
+`
+})
 
-  await sock.sendMessage(from, { text })
+
+
+return
+
+}
+
+
+
+/* ===============================
+
+DEV
+
+================================ */
+
+
+
+if(lower==="!dev"){
+
+
+
+await sock.sendMessage(from,{
+
+text:`👨‍💻 Developer Information
+
+Name : ${OWNER_NAME}
+Alias : ${OWNER_ALIAS}
+
+📱 WhatsApp
+${WHATSAPP}
+
+🌐 GitHub
+${GITHUB_URL}
+
+📢 Telegram
+https://t.me/${TELEGRAM.replace("@","")}
+
+📧 Email
+${EMAIL_PRIMARY}
+${EMAIL_SECONDARY}
+
+📜 License
+${LICENSE}
+
+© ${COPYRIGHT}
+`
+})
+
+
+
+return
+
+}
+
+
+if(lower === "!repo"){
+
+await sock.sendMessage(from,{
+text:`🌐 GitHub Repository
+
+MAINUL - X DOWNLOADER BOT
+
+https://github.com/M41NUL/DownloaderX`
+})
+
+return
+}
+/* ===============================
+UPDATE
+================================ */
+
+if(lower === "!update"){
+
+await sock.sendMessage(from,{
+text:`🔄 BOT UPDATE
+
+Current Version : v1.0
+
+Check latest updates here:
+
+https://github.com/M41NUL/DownloaderX
+
+Developer : MAINUL - X`
+})
+
+return
+}
+/* ===============================
+LOGS
+================================ */
+
+if(lower === "!logs"){
+
+await sock.sendMessage(from,{
+text:`📄 BOT LOGS
+
+Status : Running
+Errors : None detected
+System : Stable
+
+Tip:
+Check server console for detailed logs.`
+})
+
+return
+}
+/* ===============================
+
+HELP
+
+================================ */
+
+
+
+if(lower==="!help"){
+
+await sendCommandList(sock,from)
+
+return
+
+}
+
+
+
+/* ===============================
+
+MENU
+
+================================ */
+
+
+
+if(lower==="!menu"){
+
+await sendDownloaderMenu(sock,from)
+
+return
+
+}
+
+
+
+/* ===============================
+
+UNKNOWN COMMAND + ANTI SPAM
+
+================================ */
+
+
+
+if(text && text.startsWith("!")){
+
+
+
+if(!validCommands.includes(lower)){
+
+
+
+let data = spamTracker.get(from) || {count:0,blockedUntil:0}
+
+
+
+const now = Date.now()
+
+
+
+if(now < data.blockedUntil){
+
+
+
+await sock.sendMessage(from,{
+
+text:"⛔ Too many wrong commands\nTry again in 3 seconds"
+
+})
+
+
+
+return
+
+}
+
+
+
+data.count++
+
+
+
+if(data.count>=3){
+
+
+
+data.blockedUntil = now + 3000
+
+data.count = 0
+
+
+
+spamTracker.set(from,data)
+
+
+
+await sock.sendMessage(from,{
+
+text:"🚫 Command spam detected\nUser suspended for 3 seconds"
+
+})
+
+
+
+return
+
+}
+
+
+
+spamTracker.set(from,data)
+
+
+
+const suggestion = suggestCommand(lower)
+
+
+
+await sock.sendMessage(from,{
+
+text:`❌ Unknown command
+
+
+
+Did you mean: *${suggestion}* ?
+
+
+
+Type *!help* to see command list`
+
+})
+
+
+
+return
+
+
+
+}
+
+
+
+}
+
+
+
+  
+
+/* ===============================
+
+AUTO WELCOME + MENU
+
+================================ */
+
+
+
+await sock.sendMessage(from,{
+
+disappearingMessagesInChat:86400
+
+})
+
+
+
+if(text && !text.startsWith("!") && !detectPlatform(text)){
+
+
+
+await sock.sendMessage(from,{
+
+text:`👋 Welcome to *MAINUL - X DOWNLOADER BOT*
+
+
+
+Send a video link directly or choose a platform below.
+
+
+
+📥 Supported Platforms
+
+• YouTube
+
+• Facebook
+
+• Instagram
+
+• TikTok
+
+
+
+💡 Commands
+
+Type *!help* to see all bot commands
+
+`
+
+})
+
+
+
+await sendDownloaderMenu(sock,from)
+
+
+
+return
+
+
+
 }
 
 /* ===============================
+
+AUTO LINK DETECT
+
+================================ */
+
+
+
+if(text){
+
+
+
+/* ---- YOUTUBE SHORTS ---- */
+
+
+
+const ytShorts = /youtube\.com\/shorts\//i
+
+
+
+if(ytShorts.test(text)){
+
+
+
+await handleYouTubeDownloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+/* ---- YOUTUBE FIX ---- */
+
+
+
+const ytRegex = /(youtube\.com|youtu\.be)/i
+
+
+
+if(ytRegex.test(text)){
+
+
+
+await handleYouTubeDownloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+/* ---- INSTAGRAM REEL ---- */
+
+
+
+const igReel = /instagram\.com\/reel\//i
+
+
+
+if(igReel.test(text)){
+
+
+
+await handleInstagramDownloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+/* ---- FACEBOOK REEL ---- */
+
+
+
+const fbReel = /facebook\.com\/reel\//i
+
+
+
+if(fbReel.test(text)){
+
+
+
+await handleFacebookDownloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+/* ---- TIKTOK VIDEO ---- */
+
+
+
+const ttVideo = /tiktok\.com\/.*\/video\//i
+
+
+
+if(ttVideo.test(text)){
+
+
+
+await handleTikTokDownloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+const platform = detectPlatform(text)
+
+
+
+if(platform){
+
+
+
+let downloader
+
+
+
+switch(platform){
+
+
+
+case "youtube":
+
+downloader = handleYouTubeDownloader
+
+break
+
+
+
+case "facebook":
+
+downloader = handleFacebookDownloader
+
+break
+
+
+
+case "instagram":
+
+downloader = handleInstagramDownloader
+
+break
+
+
+
+case "tiktok":
+
+downloader = handleTikTokDownloader
+
+break
+
+
+
+}
+
+
+
+await downloader(sock,from,text)
+
+
+
+return
+
+
+
+}
+
+
+
+}
+
+  
+
+}
+
+
+
+/* ===============================
+
+COMMAND LIST
+
+================================ */
+
+
+
+async function sendCommandList(sock,from){
+
+
+
+const text = `📜 MAINUL - X DOWNLOADER BOT COMMAND LIST
+
+
+
+!yt → Download YouTube video
+
+!fb → Download Facebook video
+
+!ig → Download Instagram video
+
+!tt → Download TikTok video
+
+
+
+!ping → Bot speed
+
+!uptime → Bot running time
+
+!stats → RAM usage
+
+!system → System info
+
+
+
+!alive → Bot status
+
+!runtime → Live uptime
+
+!botinfo → Bot information
+
+
+
+!owner → Contact owner
+
+!dev → Developer info
+
+!repo → GitHub repository
+
+
+
+!update → Bot update
+
+!restart → Restart bot
+
+!logs → Error logs
+
+!help → Command menu
+
+
+
+━━━━━━━━━━━━━━━━━━
+
+
+
+💡 Tip:
+
+You can send a video link directly
+
+without using commands.
+
+
+
+━━━━━━━━━━━━━━━━━━
+
+
+
+👨‍💻 Developer
+
+Md. Mainul Islam (MAINUL-X)
+
+
+
+🌐 GitHub
+
+https://github.com/M41NUL
+
+
+
+⚡ Powered by MAINUL-X
+
+`
+
+
+
+await sock.sendMessage(from,{text})
+
+
+
+}
+
+
+
+/* ===============================
+
 MENU UI
-================================= */
-export async function sendDownloaderMenu(sock, from) {
-  await sock.sendMessage(from, {
-    image: fs.readFileSync(menuImagePath),
-    caption: `🤖 MAINUL-X Downloader Bot\n\nChoose a platform`,
-    footer: "MAINUL-X SYSTEM",
-    headerType: 4,
-    interactiveButtons: [
-      {
-        name: "single_select",
-        buttonParamsJson: JSON.stringify({
-          title: "📥 Video Downloader",
-          sections: [
-            {
-              title: "Platforms",
-              rows: [
-                { title: "YouTube", description: "Download YouTube video", id: "yt_downloader" },
-                { title: "Facebook", description: "Download Facebook video", id: "fb_downloader" },
-                { title: "Instagram", description: "Download Instagram reels", id: "ig_downloader" },
-                { title: "TikTok", description: "Download TikTok video", id: "tt_downloader" }
-              ]
-            },
-            {
-              title: "System",
-              rows: [
-                { title: "Show Commands", description: "All command list", id: "show_commands" }
-              ]
-            }
-          ]
-        })
-      }
-    ]
-  })
+
+================================ */
+
+
+
+export async function sendDownloaderMenu(sock,from){
+
+
+
+await sock.sendMessage(from,{
+
+
+
+image:fs.readFileSync(menuImagePath),
+
+
+
+caption:`🤖 MAINUL-X Downloader Bot
+
+
+
+Choose a platform`,
+
+
+
+footer:"MAINUL-X SYSTEM",
+
+
+
+headerType:4,
+
+
+
+interactiveButtons:[
+
+
+
+{
+
+
+
+name:"single_select",
+
+
+
+buttonParamsJson:JSON.stringify({
+
+
+
+title:"📥 Video Downloader",
+
+
+
+sections:[
+
+
+
+{
+
+
+
+title:"Platforms",
+
+
+
+rows:[
+
+
+
+{title:"YouTube",description:"Download YouTube video",id:"yt_downloader"},
+
+{title:"Facebook",description:"Download Facebook video",id:"fb_downloader"},
+
+{title:"Instagram",description:"Download Instagram reels",id:"ig_downloader"},
+
+{title:"TikTok",description:"Download TikTok video",id:"tt_downloader"}
+
+
+
+]
+
+
+
+},
+
+
+
+{
+
+
+
+title:"System",
+
+
+
+rows:[
+
+
+
+{title:"Show Commands",description:"All command list",id:"show_commands"}
+
+
+
+]
+
+
+
+}
+
+
+
+]
+
+
+
+})
+
+
+
+}
+
+
+
+]
+
+
+
+})
+
+
+
 }
