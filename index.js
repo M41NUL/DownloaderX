@@ -14,12 +14,12 @@ import pino from "pino"
 import fs from "fs"
 import path from "path"
 import chalk from "chalk"
-import inquirer from "inquirer"
 import figlet from "figlet"
 import os from "os"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
+import { WA_NUMBER } from "./config/number.js"
 
 const authDir = path.join(process.cwd(),"session")
 
@@ -130,14 +130,6 @@ console.log()
 }
 
 /* =========================
-DOWNLOAD COUNTER HOOK
-========================= */
-
-export function increaseDownload(){
-downloadsToday++
-}
-
-/* =========================
 START BOT
 ========================= */
 
@@ -170,24 +162,7 @@ const files = fs.readdirSync(authDir).filter(f => f.endsWith(".json"))
 
 if(files.length === 0){
 
-let waNumber = process.env.WA_NUMBER
-
-if(!waNumber){
-
-const response = await inquirer.prompt([
-{
-type:"input",
-name:"waNumber",
-message:chalk.cyan("📱 Enter your WhatsApp number (country code, no +):"),
-validate:(input)=> /^\d+$/.test(input) ? true : "Invalid number"
-}
-])
-
-waNumber = response.waNumber
-
-}
-
-const code = await sock.requestPairingCode(waNumber)
+const code = await sock.requestPairingCode(WA_NUMBER)
 
 console.log()
 
@@ -197,10 +172,7 @@ console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━")
 console.log()
 
 console.log(chalk.yellow("Pairing Code : "), chalk.bold(code))
-
-const device = process.env.WA_NUMBER ? "Railway Server" : "Local / Termux"
-
-console.log(chalk.blue("Device       : "), device)
+console.log(chalk.blue("Device       : Railway / Termux"))
 
 console.log()
 console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
