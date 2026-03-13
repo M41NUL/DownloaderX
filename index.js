@@ -25,10 +25,8 @@ CLEAR TERMINAL
 ========================= */
 
 function clearScreen(){
-
 console.clear()
 process.stdout.write("\x1Bc")
-
 }
 
 /* =========================
@@ -40,7 +38,6 @@ function showBanner(){
 clearScreen()
 
 const banner = figlet.textSync("MAINUL-X BOT",{font:"Big"})
-
 console.log(chalk.cyan(banner))
 
 }
@@ -66,9 +63,23 @@ CPU USAGE
 
 function getCPU(){
 
-const cpus = os.loadavg()[0]
+const cpus = os.cpus()
+let idle = 0
+let total = 0
 
-return cpus.toFixed(1)
+for (const cpu of cpus) {
+
+for (const type in cpu.times) {
+total += cpu.times[type]
+}
+
+idle += cpu.times.idle
+
+}
+
+const usage = 100 - Math.round(100 * idle / total)
+
+return usage
 
 }
 
@@ -90,35 +101,21 @@ function showStatus(sock){
 
 console.log(chalk.gray("────────────────────────"))
 
-console.log(
-chalk.green("Status  : Connected")
-)
+console.log(chalk.green("Status  : Connected"))
 
-console.log(
-chalk.cyan(`User    : ${sock.user?.id}`)
-)
+console.log(chalk.cyan(`User    : ${sock.user?.id}`))
 
-console.log(
-chalk.yellow(`Memory  : ${getMemory()} MB`)
-)
+console.log(chalk.yellow(`Memory  : ${getMemory()} MB`))
 
-console.log(
-chalk.magenta(`CPU     : ${getCPU()} %`)
-)
+console.log(chalk.magenta(`CPU     : ${getCPU()} %`))
 
-console.log(
-chalk.blue(`Uptime  : ${getUptime()}`)
-)
+console.log(chalk.blue(`Uptime  : ${getUptime()}`))
 
 console.log()
 
-console.log(
-chalk.green(`Messages processed : ${messagesProcessed}`)
-)
+console.log(chalk.green(`Messages processed : ${messagesProcessed}`))
 
-console.log(
-chalk.green(`Downloads today    : ${downloadsToday}`)
-)
+console.log(chalk.green(`Downloads today    : ${downloadsToday}`))
 
 console.log(chalk.gray("────────────────────────"))
 
@@ -131,6 +128,14 @@ console.log(chalk.green("TikTok Downloader"))
 
 console.log()
 
+}
+
+/* =========================
+DOWNLOAD COUNTER HOOK
+========================= */
+
+export function increaseDownload(){
+downloadsToday++
 }
 
 /* =========================
@@ -148,10 +153,8 @@ fs.mkdirSync(authDir)
 const { state, saveCreds } = await useMultiFileAuthState(authDir)
 
 const sock = makeWASocket({
-
 auth: state,
 logger: pino({level:"silent"})
-
 })
 
 /* =========================
@@ -170,10 +173,7 @@ const { connection, lastDisconnect } = update
 
 if(connection==="open"){
 
-clearScreen()
-
 showBanner()
-
 showStatus(sock)
 
 }
@@ -191,9 +191,7 @@ setTimeout(()=>{
 startBot()
 },3000)
 
-}
-
-else{
+}else{
 
 console.log(chalk.red("Session logged out"))
 
@@ -244,24 +242,19 @@ const files = fs.readdirSync(authDir).filter(f=>f.endsWith(".json"))
 if(files.length===0){
 
 const { waNumber } = await inquirer.prompt([
-
 {
 type:"input",
 name:"waNumber",
 message:chalk.cyan("📱 Enter your WhatsApp number (country code, no +):"),
 validate:(input)=> /^\d+$/.test(input) ? true : "Invalid number"
 }
-
 ])
 
 const code = await sock.requestPairingCode(waNumber)
 
 console.log()
-
 console.log(chalk.green("Pairing Code:"),chalk.bold(code))
-
 console.log(chalk.gray("Open WhatsApp → Linked Devices → Link Device"))
-
 console.log()
 
 }
