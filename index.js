@@ -12,10 +12,6 @@
 // Clear screen first
 process.stdout.write("\x1Bc");
 
-// Fix MaxListeners warning
-import { setMaxListeners } from "events";
-setMaxListeners(25);
-
 import { default as makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import fs from 'fs';
@@ -52,10 +48,6 @@ console.log(chalk.yellow('║') + chalk.green('         WhatsApp Media Downloade
 console.log(chalk.yellow('║') + chalk.blue('              Created by MAINUL-X 🇧🇩') + chalk.yellow('                 ║'));
 console.log(chalk.yellow('╚══════════════════════════════════════════════════════════╝\n'));
 
-// Reconnect counter
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 3;
-
 async function startBot() {
   try {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -67,6 +59,14 @@ async function startBot() {
       browser: ['Ubuntu', 'Chrome', '120.0.0']
     });
 
+    // Check if session exists
+    const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
+    
+    // If no session, show login menu
+    if (files.length === 0) {
+      await showLoginMenu(sock);
+    }
+
     // Connection update handler
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
@@ -77,7 +77,6 @@ async function startBot() {
       }
 
       if (connection === 'open') {
-        reconnectAttempts = 0;
         console.log(chalk.green('\n✅ Connected to WhatsApp successfully!'));
         console.log(chalk.cyan(`👤 User: ${sock.user?.id || 'Unknown'}`));
         console.log(chalk.magenta('⚡ Bot is ready! Send any video link.\n'));
@@ -85,106 +84,88 @@ async function startBot() {
 
       if (connection === 'close') {
         const reason = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = reason !== DisconnectReason.loggedOut;
-        
-        if (shouldReconnect && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          reconnectAttempts++;
-          console.log(chalk.yellow(`\n🔄 Reconnecting... Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}\n`));
-          setTimeout(() => {
-            startBot();
-          }, 3000);
-        } else if (reason === DisconnectReason.loggedOut) {
+        if (reason === DisconnectReason.loggedOut) {
           console.log(chalk.red('\n❌ Logged out. Delete session folder and restart.\n'));
-        } else {
-          console.log(chalk.red('\n❌ Max reconnection attempts reached. Please restart.\n'));
+          process.exit(1);
         }
       }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Handle login method if no session
-    const files = fs.existsSync(authDir) ? fs.readdirSync(authDir).filter(f => f.endsWith('.json')) : [];
-    
-    if (files.length === 0) {
-      console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
-      console.log(chalk.cyan('║       LOGIN METHOD SELECTION      ║'));
-      console.log(chalk.cyan('╠════════════════════════════════════╣'));
-      console.log(chalk.cyan('║') + '  [1] 📱 QR Code (Recommended)    ' + chalk.cyan('║'));
-      console.log(chalk.cyan('║') + '  [2] 🔢 Pairing Code             ' + chalk.cyan('║'));
-      console.log(chalk.cyan('║') + '  [3] ℹ️  Developer Info          ' + chalk.cyan('║'));
-      console.log(chalk.cyan('║') + '  [4] 🚪 Exit                     ' + chalk.cyan('║'));
-      console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
-
-      const { choice } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'choice',
-          message: chalk.yellow('Enter your choice (1-4):'),
-          validate: (input) => {
-            const num = parseInt(input);
-            if (num >= 1 && num <= 4) return true;
-            return 'Please enter a number between 1 and 4';
-          }
-        }
-      ]);
-
-      const selected = parseInt(choice);
-
-      if (selected === 1) {
-        console.log(chalk.green('\n✅ QR Code selected. Waiting for QR...\n'));
-        // QR code will show automatically
-      }
-      else if (selected === 2) {
-        const { number } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'number',
-            message: chalk.cyan('Enter your WhatsApp number (with country code, no +):'),
-            validate: (input) => /^\d{10,}$/.test(input) ? true : 'Invalid number!'
-          }
-        ]);
-
-        console.log(chalk.yellow('\n⏳ Requesting pairing code...'));
-        
-        setTimeout(async () => {
-          try {
-            const code = await sock.requestPairingCode(number);
-            console.log(chalk.greenBright('\n✅ Your pairing code:'));
-            console.log(chalk.bold.magenta(`\n   ${code}\n`));
-            console.log(chalk.cyan('Open WhatsApp > Linked Devices > Link a Device'));
-          } catch (err) {
-            console.log(chalk.red('\n❌ Failed to get pairing code. Please use QR code.\n'));
-          }
-        }, 2000);
-      }
-      else if (selected === 3) {
-        console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
-        console.log(chalk.cyan('║                                    ║'));
-        console.log(chalk.cyan('║') + '     👑 *MAINUL-X*                ' + chalk.cyan('║'));
-        console.log(chalk.cyan('║') + '     WhatsApp Media Downloader    ' + chalk.cyan('║'));
-        console.log(chalk.cyan('║') + '     Version: 1.0.0               ' + chalk.cyan('║'));
-        console.log(chalk.cyan('║') + '     GitHub: @M41NUL              ' + chalk.cyan('║'));
-        console.log(chalk.cyan('║') + '     🇧🇩 From Bangladesh           ' + chalk.cyan('║'));
-        console.log(chalk.cyan('║                                    ║'));
-        console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
-        
-        setTimeout(() => {
-          startBot();
-        }, 3000);
-      }
-      else if (selected === 4) {
-        console.log(chalk.yellow('\n👋 Goodbye!\n'));
-        process.exit(0);
-      }
-    }
-
   } catch (err) {
     console.error(chalk.red('\n❌ Fatal error:'), err);
-    console.log(chalk.yellow('\n🔄 Restarting...\n'));
-    setTimeout(() => {
-      startBot();
-    }, 5000);
+    process.exit(1);
+  }
+}
+
+async function showLoginMenu(sock) {
+  console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
+  console.log(chalk.cyan('║       LOGIN METHOD SELECTION      ║'));
+  console.log(chalk.cyan('╠════════════════════════════════════╣'));
+  console.log(chalk.cyan('║') + '  [1] 📱 QR Code (Recommended)    ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '  [2] 🔢 Pairing Code             ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '  [3] ℹ️  Developer Info          ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '  [4] 🚪 Exit                     ' + chalk.cyan('║'));
+  console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
+
+  const { choice } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'choice',
+      message: chalk.yellow('Enter your choice (1-4):'),
+      validate: (input) => {
+        const num = parseInt(input);
+        if (num >= 1 && num <= 4) return true;
+        return 'Please enter a number between 1 and 4';
+      }
+    }
+  ]);
+
+  const selected = parseInt(choice);
+
+  if (selected === 1) {
+    console.log(chalk.green('\n✅ QR Code selected. Waiting for QR...\n'));
+    // QR code will show automatically from connection.update
+  }
+  else if (selected === 2) {
+    const { number } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'number',
+        message: chalk.cyan('Enter your WhatsApp number (with country code, no +):'),
+        validate: (input) => /^\d{10,}$/.test(input) ? true : 'Invalid number!'
+      }
+    ]);
+
+    console.log(chalk.yellow('\n⏳ Requesting pairing code...'));
+    
+    try {
+      const code = await sock.requestPairingCode(number);
+      console.log(chalk.greenBright('\n✅ Your pairing code:'));
+      console.log(chalk.bold.magenta(`\n   ${code}\n`));
+      console.log(chalk.cyan('Open WhatsApp > Linked Devices > Link a Device'));
+    } catch (err) {
+      console.log(chalk.red('\n❌ Failed to get pairing code. Please use QR code.\n'));
+      await showLoginMenu(sock);
+    }
+  }
+  else if (selected === 3) {
+    console.log(chalk.cyan('\n╔════════════════════════════════════╗'));
+    console.log(chalk.cyan('║                                    ║'));
+    console.log(chalk.cyan('║') + '     👑 *MAINUL-X*                ' + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + '     WhatsApp Media Downloader    ' + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + '     Version: 1.0.0               ' + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + '     GitHub: @M41NUL              ' + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + '     🇧🇩 From Bangladesh           ' + chalk.cyan('║'));
+    console.log(chalk.cyan('║                                    ║'));
+    console.log(chalk.cyan('╚════════════════════════════════════╝\n'));
+    
+    await showLoginMenu(sock);
+  }
+  else if (selected === 4) {
+    console.log(chalk.yellow('\n👋 Goodbye!\n'));
+    process.exit(0);
   }
 }
 
