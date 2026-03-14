@@ -30,6 +30,26 @@ return true
 
 }
 
+/* =========================
+CHECK SECURITY (HANDLER USE)
+========================= */
+
+export async function checkSecurity(user){
+
+const allowed = antiSpam(user)
+
+if(!allowed){
+return true
+}
+
+return false
+
+}
+
+/* =========================
+DOWNLOAD QUEUE
+========================= */
+
 const downloadQueue = []
 let downloading = false
 
