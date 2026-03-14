@@ -6,7 +6,7 @@
  */
 
 import { userState } from "../userState.js"
-import { sendDownloaderMenu } from "../handler.js"
+import { sendDownloaderMenu } from "../utils/menu.js"
 
 import {
 BOT_NAME,
@@ -21,11 +21,15 @@ EMAIL_DEV
 
 const BOT_START_TIME = Date.now()
 
-export async function handleCommands(sock,from,text){
+export async function handleCommands(sock, from, text){
 
 const cmd = text?.toLowerCase().trim()
 
 switch(cmd){
+
+/* ======================
+SYSTEM COMMANDS
+====================== */
 
 case "!ping":{
 
@@ -91,12 +95,20 @@ System : Running`
 return true
 }
 
+/* ======================
+MENU
+====================== */
+
 case "!menu":{
 
 await sendDownloaderMenu(sock,from)
 
 return true
 }
+
+/* ======================
+OWNER
+====================== */
 
 case "!owner":{
 
@@ -140,9 +152,16 @@ ${GITHUB_URL}`
 return true
 }
 
+/* ======================
+DOWNLOADER COMMANDS
+====================== */
+
 case "!yt":{
 
-userState.set(from,{step:"yt_wait_url"})
+userState.set(from,{
+step:"yt_wait_url",
+time:Date.now()
+})
 
 await sock.sendMessage(from,{
 text:"📺 Send YouTube video link"
@@ -153,7 +172,10 @@ return true
 
 case "!fb":{
 
-userState.set(from,{step:"fb_wait_url"})
+userState.set(from,{
+step:"fb_wait_url",
+time:Date.now()
+})
 
 await sock.sendMessage(from,{
 text:"📘 Send Facebook video link"
@@ -164,7 +186,10 @@ return true
 
 case "!ig":{
 
-userState.set(from,{step:"ig_wait_url"})
+userState.set(from,{
+step:"ig_wait_url",
+time:Date.now()
+})
 
 await sock.sendMessage(from,{
 text:"📸 Send Instagram video link"
@@ -175,7 +200,10 @@ return true
 
 case "!tt":{
 
-userState.set(from,{step:"tt_wait_url"})
+userState.set(from,{
+step:"tt_wait_url",
+time:Date.now()
+})
 
 await sock.sendMessage(from,{
 text:"🎵 Send TikTok video link"
@@ -183,6 +211,10 @@ text:"🎵 Send TikTok video link"
 
 return true
 }
+
+/* ======================
+HELP
+====================== */
 
 case "!help":{
 
