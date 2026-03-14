@@ -1,92 +1,61 @@
 /**
- * =============================================
- * MAINUL-X Instagram Video/Reels Downloader
- * =============================================
+ * File: src/features/instagram.js
+ * MAINUL-X Downloader Bot
+ * Author: Md. Mainul Islam (MAINUL-X)
+ * GitHub: https://github.com/M41NUL
  */
 
 import fs from "fs"
 import { dirname } from "path"
 import { fileURLToPath } from "url"
 import ytdlpExec from "yt-dlp-exec"
+import { startProgress, finishProgress } from "../utils/progress.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-export async function handleInstagramDownloader(sock, from, url){
+export async function handleInstagramDownloader(sock,from,url){
 
 if(!url || !url.startsWith("http")){
-await sock.sendMessage(from,{ text:"❌ Invalid URL. Please provide a valid Instagram link." })
+await sock.sendMessage(from,{text:"❌ Invalid Instagram URL"})
 return
 }
 
 if(!/instagram\.com/i.test(url)){
-await sock.sendMessage(from,{ text:"❌ This is not an Instagram URL." })
+await sock.sendMessage(from,{text:"❌ This is not an Instagram link"})
 return
 }
 
 const tempFile = `${__dirname}/tmp_ig_${Date.now()}.mp4`
 
-try{
-
-const progressMsg = await sock.sendMessage(from,{ text:"⏳ Processing... 0%" })
-
-let progress = 0
-
-const progressInterval = setInterval(async()=>{
-
-progress += 10
-
-if(progress <= 90){
+const progress = await startProgress(sock,from,"Downloading Instagram Video")
 
 try{
-await sock.sendMessage(from,{
-text:`⏳ Processing... ${progress}%`,
-edit:progressMsg.key
-})
-}catch{}
-
-}
-
-},1500)
-
-/* DOWNLOAD */
 
 await ytdlpExec(url,{
-output: tempFile,
-format:"best",
+output:tempFile,
+format:"bv*[height<=720]+ba/best",
 mergeOutputFormat:"mp4",
-noCheckCertificates:true,
 preferFreeFormats:true,
-addHeader:["referer:instagram.com"]
+noCheckCertificates:true
 })
 
-clearInterval(progressInterval)
-
-try{
-await sock.sendMessage(from,{
-text:"✅ Processing... 100%",
-edit:progressMsg.key
-})
-}catch{}
+await finishProgress(sock,from,progress)
 
 if(!fs.existsSync(tempFile)){
 throw new Error("Download failed")
 }
 
 const stats = fs.statSync(tempFile)
-const fileSizeMB = (stats.size/(1024*1024)).toFixed(2)
-
-/* SEND VIDEO */
+const size = (stats.size/(1024*1024)).toFixed(2)
 
 await sock.sendMessage(from,{
-video:{ url: tempFile },
+video:{url:tempFile},
 mimetype:"video/mp4",
-caption:`📹 *Instagram Video Downloaded!*
+caption:`📸 *Instagram Video Downloaded*
 
-━━━━━━━━━━━━━━━━━━━━━
-📦 Size : ${fileSizeMB} MB
+📦 Size : ${size} MB
 🔗 Source : Instagram
-━━━━━━━━━━━━━━━━━━━━━
 ⚡ Powered by MAINUL-X`
 })
 
@@ -94,10 +63,10 @@ fs.unlinkSync(tempFile)
 
 }catch(err){
 
-console.log("Instagram download error",err.message)
+console.log("Instagram download error:",err.message)
 
 await sock.sendMessage(from,{
-text:"❌ Failed to download Instagram video."
+text:"❌ Failed to download Instagram video"
 })
 
 if(fs.existsSync(tempFile)){
