@@ -58,7 +58,7 @@ syncFullHistory:false
 wrapSendMessageGlobally(sock)
 
 /* =========================
-PAIRING CODE (FIRST TIME ONLY)
+PAIRING CODE (FIRST TIME)
 ========================= */
 
 const credsPath = path.join(authDir,"creds.json")
@@ -136,13 +136,11 @@ sock.ev.on("creds.update",saveCreds)
 MESSAGE LISTENER
 ========================= */
 
-sock.ev.on("messages.upsert",async({messages,type})=>{
-
-if(type !== "notify") return
+sock.ev.on("messages.upsert", async ({ messages }) => {
 
 try{
 
-const msg = messages[0]
+const msg = messages?.[0]
 
 if(!msg) return
 if(!msg.message) return
