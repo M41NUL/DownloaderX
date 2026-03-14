@@ -5,4 +5,4 @@
  * GitHub: https://github.com/M41NUL
  */
 
-export const WA_NUMBER = "881308850528"
+export const WA_NUMBER = "880858845308"
