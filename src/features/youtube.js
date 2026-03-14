@@ -32,12 +32,13 @@ const progress = await startProgress(sock,from,"Downloading YouTube Video")
 
 try{
 
+/* DOWNLOAD VIDEO (WHATSAPP COMPATIBLE MP4) */
+
 await ytdlpExec(url,{
-output:tempFile,
-format:"bv*[height<=720]+ba/best",
-mergeOutputFormat:"mp4",
-preferFreeFormats:true,
-noCheckCertificates:true
+output: tempFile,
+format: "best[ext=mp4][height<=720]",
+mergeOutputFormat: "mp4",
+noCheckCertificates: true
 })
 
 await finishProgress(sock,from,progress)
@@ -46,12 +47,31 @@ if(!fs.existsSync(tempFile)){
 throw new Error("Download failed")
 }
 
+/* FILE SIZE */
+
 const stats = fs.statSync(tempFile)
-const size = (stats.size/(1024*1024)).toFixed(2)
+const sizeMB = stats.size / (1024*1024)
+
+const size = sizeMB.toFixed(2)
+
+/* WHATSAPP LIMIT CHECK */
+
+if(sizeMB > 90){
 
 await sock.sendMessage(from,{
-video:{url:tempFile},
-mimetype:"video/mp4",
+text:`⚠ Video is too large (${size} MB)\nMax supported ~90MB`
+})
+
+fs.unlinkSync(tempFile)
+return
+
+}
+
+/* SEND VIDEO */
+
+await sock.sendMessage(from,{
+video: fs.readFileSync(tempFile),
+mimetype: "video/mp4",
 caption:`🎥 *YouTube Video Downloaded*
 
 📦 Size : ${size} MB
