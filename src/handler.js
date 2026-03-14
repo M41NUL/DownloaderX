@@ -8,7 +8,6 @@ import fs from "fs"
 import path from "path"
 
 import { userState } from "./userState.js"
-
 import { handleCommands } from "./commands/commands.js"
 
 import { handleYouTubeDownloader } from "./features/youtube.js"
@@ -20,17 +19,83 @@ import { validateUrl } from "./utils/validateUrl.js"
 
 const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 
-const greetings = [
-"hi","hello","hey","hlw","menu","start",
-"salam","assalamu alaikum","assalamualaikum",
-"bot","active","on"
-]
+/* =========================
+WELCOME TRACKER
+========================= */
+
+const welcomeTracker = new Map()
+
+function shouldSendWelcome(user){
+
+const today = new Date().toDateString()
+const last = welcomeTracker.get(user)
+
+if(last !== today){
+welcomeTracker.set(user,today)
+return true
+}
+
+return false
+
+}
+
+/* =========================
+DOWNLOAD QUEUE
+========================= */
+
+let queue = []
+let processing = false
+
+async function runQueue(){
+
+if(processing) return
+if(queue.length === 0) return
+
+processing = true
+
+const job = queue.shift()
+
+try{
+await job()
+}catch{}
+
+processing = false
+
+runQueue()
+
+}
+
+/* =========================
+TYPING EFFECT
+========================= */
+
+async function typing(sock,jid){
+
+await sock.presenceSubscribe(jid)
+await sock.sendPresenceUpdate("composing",jid)
+
+await new Promise(r => setTimeout(r,800))
+
+await sock.sendPresenceUpdate("paused",jid)
+
+}
+
+/* =========================
+MAIN HANDLER
+========================= */
 
 export async function handler(sock,msg){
 
 if(!msg?.message) return
 
 const from = msg.key.remoteJid
+
+/* AUTO READ */
+
+try{
+await sock.readMessages([msg.key])
+}catch{}
+
 const state = userState.get(from) || {step:"start"}
 
 const text =
@@ -43,31 +108,98 @@ msg.message?.videoMessage?.caption ||
 const lower = text.toLowerCase().trim()
 
 /* =========================
+STEP TIMEOUT
+========================= */
+
+if(state.step && state.time){
+
+const diff = Date.now() - state.time
+
+if(diff > 60000){
+
+userState.set(from,{step:"menuMain"})
+
+await sock.sendMessage(from,{
+text:"⌛ Request expired. Please send command again."
+})
+
+return
+
+}
+
+}
+
+/* =========================
 WELCOME MESSAGE
 ========================= */
 
-if(greetings.includes(lower) && state.step === "start"){
+if(shouldSendWelcome(from)){
+
+await typing(sock,from)
 
 await sock.sendMessage(from,{
 text:`👋 Welcome to *MAINUL - X DOWNLOADER BOT*
 
-Send a video link directly or choose a platform below.
+Send a video link directly or press Start.
 
 📥 Supported Platforms
 • YouTube
 • Facebook
 • Instagram
-• TikTok
-
-💡 Commands
-Type *!help* to see all commands`
+• TikTok`,
+buttons:[
+{
+buttonId:"start_menu",
+buttonText:{displayText:"🚀 Start"},
+type:1
+}
+],
+headerType:1
 })
 
+}
+
+/* =========================
+START BUTTON
+========================= */
+
+if(msg.message?.buttonsResponseMessage){
+
+const id = msg.message.buttonsResponseMessage.selectedButtonId
+
+if(id === "start_menu"){
+
+await typing(sock,from)
 await sendDownloaderMenu(sock,from)
+return
+
+}
+
+if(id === "cancel_download"){
 
 userState.set(from,{step:"menuMain"})
 
+await sock.sendMessage(from,{
+text:"❌ Download cancelled."
+})
+
 return
+
+}
+
+}
+
+/* =========================
+START / MENU TEXT
+========================= */
+
+if(lower === "start" || lower === "menu"){
+
+await typing(sock,from)
+await sendDownloaderMenu(sock,from)
+
+return
+
 }
 
 /* =========================
@@ -76,37 +208,88 @@ COMMAND SYSTEM
 
 if(await handleCommands(sock,from,lower)) return
 
-
 /* =========================
-AUTO LINK DETECT
+SMART PLATFORM DETECT
 ========================= */
 
 if(validateUrl(text,"youtube")){
+
+queue.push(async()=>{
+
+await typing(sock,from)
+
+await sock.sendMessage(from,{
+text:"🎬 Detected: YouTube Video\n⬇ Starting download..."
+})
+
 await handleYouTubeDownloader(sock,from,text)
-userState.set(from,{step:"menuMain"})
+
+})
+
+runQueue()
 return
+
 }
 
 if(validateUrl(text,"facebook")){
+
+queue.push(async()=>{
+
+await typing(sock,from)
+
+await sock.sendMessage(from,{
+text:"📘 Detected: Facebook Video\n⬇ Starting download..."
+})
+
 await handleFacebookDownloader(sock,from,text)
-userState.set(from,{step:"menuMain"})
+
+})
+
+runQueue()
 return
+
 }
 
 if(validateUrl(text,"instagram")){
+
+queue.push(async()=>{
+
+await typing(sock,from)
+
+await sock.sendMessage(from,{
+text:"📸 Detected: Instagram Video\n⬇ Starting download..."
+})
+
 await handleInstagramDownloader(sock,from,text)
-userState.set(from,{step:"menuMain"})
+
+})
+
+runQueue()
 return
+
 }
 
 if(validateUrl(text,"tiktok")){
+
+queue.push(async()=>{
+
+await typing(sock,from)
+
+await sock.sendMessage(from,{
+text:"🎵 Detected: TikTok Video\n⬇ Starting download..."
+})
+
 await handleTikTokDownloader(sock,from,text)
-userState.set(from,{step:"menuMain"})
+
+})
+
+runQueue()
 return
+
 }
 
 /* =========================
-INTERACTIVE LIST RESPONSE
+INTERACTIVE MENU RESPONSE
 ========================= */
 
 let rowId
@@ -129,23 +312,87 @@ if(rowId){
 switch(rowId){
 
 case "yt_downloader":
-userState.set(from,{step:"yt_wait_url"})
-await sock.sendMessage(from,{text:"📺 Send YouTube video link"})
+
+userState.set(from,{
+step:"yt_wait_url",
+time:Date.now()
+})
+
+await sock.sendMessage(from,{
+text:"📺 Send YouTube video link\n\n⏳ Time limit: 60 seconds",
+buttons:[
+{
+buttonId:"cancel_download",
+buttonText:{displayText:"❌ Cancel"},
+type:1
+}
+],
+headerType:1
+})
+
 return
 
 case "fb_downloader":
-userState.set(from,{step:"fb_wait_url"})
-await sock.sendMessage(from,{text:"📘 Send Facebook video link"})
+
+userState.set(from,{
+step:"fb_wait_url",
+time:Date.now()
+})
+
+await sock.sendMessage(from,{
+text:"📘 Send Facebook video link\n\n⏳ Time limit: 60 seconds",
+buttons:[
+{
+buttonId:"cancel_download",
+buttonText:{displayText:"❌ Cancel"},
+type:1
+}
+],
+headerType:1
+})
+
 return
 
 case "ig_downloader":
-userState.set(from,{step:"ig_wait_url"})
-await sock.sendMessage(from,{text:"📸 Send Instagram video link"})
+
+userState.set(from,{
+step:"ig_wait_url",
+time:Date.now()
+})
+
+await sock.sendMessage(from,{
+text:"📸 Send Instagram video link\n\n⏳ Time limit: 60 seconds",
+buttons:[
+{
+buttonId:"cancel_download",
+buttonText:{displayText:"❌ Cancel"},
+type:1
+}
+],
+headerType:1
+})
+
 return
 
 case "tt_downloader":
-userState.set(from,{step:"tt_wait_url"})
-await sock.sendMessage(from,{text:"🎵 Send TikTok video link"})
+
+userState.set(from,{
+step:"tt_wait_url",
+time:Date.now()
+})
+
+await sock.sendMessage(from,{
+text:"🎵 Send TikTok video link\n\n⏳ Time limit: 60 seconds",
+buttons:[
+{
+buttonId:"cancel_download",
+buttonText:{displayText:"❌ Cancel"},
+type:1
+}
+],
+headerType:1
+})
+
 return
 
 }
@@ -165,7 +412,14 @@ await sock.sendMessage(from,{text:"❌ Invalid YouTube link"})
 return
 }
 
+queue.push(async()=>{
+
 await handleYouTubeDownloader(sock,from,text)
+
+})
+
+runQueue()
+
 userState.set(from,{step:"menuMain"})
 return
 
@@ -177,7 +431,14 @@ await sock.sendMessage(from,{text:"❌ Invalid Facebook link"})
 return
 }
 
+queue.push(async()=>{
+
 await handleFacebookDownloader(sock,from,text)
+
+})
+
+runQueue()
+
 userState.set(from,{step:"menuMain"})
 return
 
@@ -189,7 +450,14 @@ await sock.sendMessage(from,{text:"❌ Invalid Instagram link"})
 return
 }
 
+queue.push(async()=>{
+
 await handleInstagramDownloader(sock,from,text)
+
+})
+
+runQueue()
+
 userState.set(from,{step:"menuMain"})
 return
 
@@ -201,7 +469,14 @@ await sock.sendMessage(from,{text:"❌ Invalid TikTok link"})
 return
 }
 
+queue.push(async()=>{
+
 await handleTikTokDownloader(sock,from,text)
+
+})
+
+runQueue()
+
 userState.set(from,{step:"menuMain"})
 return
 
@@ -210,7 +485,7 @@ return
 }
 
 /* =========================
-INTERACTIVE MENU
+DOWNLOADER MENU
 ========================= */
 
 export async function sendDownloaderMenu(sock, from){
