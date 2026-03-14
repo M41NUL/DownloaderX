@@ -5,14 +5,18 @@
  * GitHub: https://github.com/M41NUL
  */
 
+import { BOT_NAME } from "../../config/bot.js"
+
 export async function handleSystemCommands(sock,from,text){
 
-const cmd = text.toLowerCase()
+if(!text) return false
+
+const cmd = text.toLowerCase().trim()
 
 if(cmd === "!help"){
 
 await sock.sendMessage(from,{
-text:`📜 *MAINUL - X DOWNLOADER BOT*
+text:`📜 *${BOT_NAME}*
 
 ━━━━━━━━━━━━━━
 
