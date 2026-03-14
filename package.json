@@ -1,27 +1,23 @@
 {
   "name": "downloaderx",
   "version": "1.0.0",
-  "description": "MAINUL - X DOWNLOADER BOT — WhatsApp bot for downloading videos from YouTube, Facebook, Instagram, and TikTok.",
+  "description": "MAINUL-X Downloader Bot — WhatsApp video downloader for YouTube, Facebook, Instagram and TikTok.",
   "main": "index.js",
   "type": "module",
 
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node index.js"
   },
 
   "keywords": [
     "whatsapp",
     "whatsapp-bot",
-    "mainul-x",
     "video-downloader",
-    "youtube-downloader",
-    "facebook-downloader",
-    "instagram-downloader",
-    "tiktok-downloader",
-    "nodejs",
-    "automation",
-    "wa-bot"
+    "youtube",
+    "facebook",
+    "instagram",
+    "tiktok",
+    "baileys"
   ],
 
   "author": "Md. Mainul Islam (MAINUL-X)",
@@ -32,26 +28,12 @@
     "url": "https://github.com/M41NUL/DownloaderX"
   },
 
-  "bugs": {
-    "url": "https://github.com/M41NUL/DownloaderX/issues"
-  },
-
-  "homepage": "https://github.com/M41NUL/DownloaderX",
-
   "engines": {
     "node": ">=20"
   },
 
   "dependencies": {
     "atexovi-baileys": "7.5.6-rc.6",
-    "chalk": "^5.6.2",
-    "cli-table3": "^0.6.5",
-    "dotenv": "^17.2.3",
-    "figlet": "^1.9.3",
-    "inquirer": "^12.9.6",
-    "jimp": "^1.6.0",
-    "lru-cache": "^10.0.0",
-    "ora": "^9.0.0",
     "pino": "^10.1.0",
     "yt-dlp-exec": "^1.0.2"
   }
