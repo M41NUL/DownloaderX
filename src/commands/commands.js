@@ -5,7 +5,9 @@
  * GitHub: https://github.com/M41NUL
  */
 
-import os from "os"
+import { userState } from "../userState.js"
+import { sendDownloaderMenu } from "../handler.js"
+
 import {
 BOT_NAME,
 VERSION,
@@ -14,7 +16,6 @@ OWNER_ALIAS,
 WHATSAPP,
 TELEGRAM,
 GITHUB_URL,
-EMAIL_PRIMARY,
 EMAIL_DEV
 } from "../../config/bot.js"
 
@@ -36,6 +37,7 @@ const end = Date.now()
 
 await sock.sendMessage(from,{
 text:`🏓 Pong
+
 Response : ${end-start} ms`
 })
 
@@ -89,6 +91,13 @@ System : Running`
 return true
 }
 
+case "!menu":{
+
+await sendDownloaderMenu(sock,from)
+
+return true
+}
+
 case "!owner":{
 
 await sock.sendMessage(from,{
@@ -131,6 +140,50 @@ ${GITHUB_URL}`
 return true
 }
 
+case "!yt":{
+
+userState.set(from,{step:"yt_wait_url"})
+
+await sock.sendMessage(from,{
+text:"📺 Send YouTube video link"
+})
+
+return true
+}
+
+case "!fb":{
+
+userState.set(from,{step:"fb_wait_url"})
+
+await sock.sendMessage(from,{
+text:"📘 Send Facebook video link"
+})
+
+return true
+}
+
+case "!ig":{
+
+userState.set(from,{step:"ig_wait_url"})
+
+await sock.sendMessage(from,{
+text:"📸 Send Instagram video link"
+})
+
+return true
+}
+
+case "!tt":{
+
+userState.set(from,{step:"tt_wait_url"})
+
+await sock.sendMessage(from,{
+text:"🎵 Send TikTok video link"
+})
+
+return true
+}
+
 case "!help":{
 
 await sock.sendMessage(from,{
@@ -142,7 +195,7 @@ text:`📜 ${BOT_NAME}
 !ping — Check bot speed
 !uptime — Bot running time
 !runtime — Bot runtime
-!alive — Check bot status
+!alive — Bot status
 
 👤 USER COMMANDS
 !menu — Show downloader menu
