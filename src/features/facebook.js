@@ -1,155 +1,76 @@
 /**
- * =============================================
- *      MAINUL-X WhatsApp Media Downloader
- * =============================================
+ * File: src/features/facebook.js
+ * MAINUL-X Downloader Bot
  * Author: Md. Mainul Islam (MAINUL-X)
  * GitHub: https://github.com/M41NUL
- * Telegram: @mdmainulislaminfo
- * Email: githubmainul@gmail.com
- * =============================================
- * Feature: Facebook Video Downloader with Progress Bar
- * =============================================
  */
 
 import fs from "fs"
 import { dirname } from "path"
 import { fileURLToPath } from "url"
 import ytdlpExec from "yt-dlp-exec"
+import { startProgress, finishProgress } from "../utils/progress.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-export async function handleFacebookDownloader(sock, from, url){
+export async function handleFacebookDownloader(sock,from,url){
 
 if(!url || !url.startsWith("http")){
-
-await sock.sendMessage(from,{
-text:"❌ Invalid URL. Please send a valid Facebook video link."
-})
-
+await sock.sendMessage(from,{text:"❌ Invalid Facebook URL"})
 return
+}
 
+if(!/facebook\.com|fb\.watch/i.test(url)){
+await sock.sendMessage(from,{text:"❌ This is not a Facebook link"})
+return
 }
 
 const tempFile = `${__dirname}/tmp_fb_${Date.now()}.mp4`
 
-try{
-
-/* ===============================
-START MESSAGE
-================================ */
-
-const progressMsg = await sock.sendMessage(from,{
-text:"⏳ Processing... 0%"
-})
-
-/* ===============================
-FAKE PROGRESS BAR
-================================ */
-
-let progress = 0
-
-const progressInterval = setInterval(async()=>{
-
-progress += 10
-
-if(progress <= 90){
+const progress = await startProgress(sock,from,"Downloading Facebook Video")
 
 try{
-
-await sock.sendMessage(from,{
-text:`⏳ Processing... ${progress}%`,
-edit:progressMsg.key
-})
-
-}catch{}
-
-}
-
-},1500)
-
-/* ===============================
-DOWNLOAD VIDEO
-================================ */
 
 await ytdlpExec(url,{
 output:tempFile,
-format:"best",
+format:"bv*[height<=720]+ba/best",
 mergeOutputFormat:"mp4",
-noCheckCertificates:true,
 preferFreeFormats:true,
-addHeader:["referer:facebook.com"]
+noCheckCertificates:true
 })
 
-clearInterval(progressInterval)
-
-/* ===============================
-FINAL PROGRESS
-================================ */
-
-try{
-
-await sock.sendMessage(from,{
-text:"✅ Processing... 100%",
-edit:progressMsg.key
-})
-
-}catch{}
-
-/* ===============================
-CHECK FILE
-================================ */
+await finishProgress(sock,from,progress)
 
 if(!fs.existsSync(tempFile)){
-
 throw new Error("Download failed")
-
 }
 
 const stats = fs.statSync(tempFile)
-
-const fileSizeMB = (stats.size / (1024*1024)).toFixed(2)
-
-/* ===============================
-SEND VIDEO
-================================ */
+const size = (stats.size/(1024*1024)).toFixed(2)
 
 await sock.sendMessage(from,{
-
-video:{ url: tempFile },
-
+video:{url:tempFile},
 mimetype:"video/mp4",
+caption:`📘 *Facebook Video Downloaded*
 
-caption:`📹 *Facebook Video Downloaded!*
-
-━━━━━━━━━━━━━━━━━━━━━
-📦 Size : ${fileSizeMB} MB
+📦 Size : ${size} MB
 🔗 Source : Facebook
-━━━━━━━━━━━━━━━━━━━━━
 ⚡ Powered by MAINUL-X`
-
 })
 
-/* ===============================
-DELETE TEMP FILE
-================================ */
-
 fs.unlinkSync(tempFile)
-
-console.log("Facebook video sent")
 
 }catch(err){
 
 console.log("Facebook download error:",err.message)
 
 await sock.sendMessage(from,{
-text:"❌ Failed to download Facebook video."
+text:"❌ Failed to download Facebook video"
 })
 
 if(fs.existsSync(tempFile)){
-
 fs.unlinkSync(tempFile)
-
 }
 
 }
