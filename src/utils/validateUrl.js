@@ -1,105 +1,42 @@
 /**
- * =============================================
- * MAINUL-X URL Validator
- * =============================================
+ * File: src/utils/validateUrl.js
+ * MAINUL-X Downloader Bot
+ * Author: Md. Mainul Islam (MAINUL-X)
+ * GitHub: https://github.com/M41NUL
  */
 
-const URL_PATTERNS = {
-
-youtube:
-/^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.be)\/(watch\?v=|shorts\/|embed\/)?[a-zA-Z0-9_-]{11}/i,
-
-facebook:
-/^(https?:\/\/)?(www\.|m\.)?(facebook\.com|fb\.watch)\/(watch|reel|video|videos|share)\/?.+/i,
-
-instagram:
-/^(https?:\/\/)?(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+/i,
-
-tiktok:
-/^(https?:\/\/)?((www|m|vt|vm)\.)?tiktok\.com\/.+/i
-
-}
-
-/* ============================================= */
-
-export function validateUrl(url,platform){
+export function validateUrl(url, platform){
 
 if(typeof url !== "string") return false
 
-if(!URL_PATTERNS[platform]) return false
-
-let clean = url.trim()
-
-if(!clean.startsWith("http")){
-clean = "https://" + clean
+const patterns = {
+youtube:/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i,
+facebook:/^(https?:\/\/)?(www\.)?facebook\.com\/.+$/i,
+instagram:/^(https?:\/\/)?(www\.)?instagram\.com\/(p|reel|tv)\/.+$/i,
+tiktok:/^(https?:\/\/)?((www|m|vt|t)\.)?tiktok\.com\/.+$/i
 }
 
-return URL_PATTERNS[platform].test(clean)
+if(!patterns[platform]) return false
+
+return patterns[platform].test(url.trim())
 
 }
-
-/* ============================================= */
 
 export function detectPlatform(url){
 
 if(typeof url !== "string") return null
 
-let clean = url.trim()
-
-if(!clean.startsWith("http")){
-clean = "https://" + clean
+const patterns = {
+youtube:/youtube\.com|youtu\.be/i,
+facebook:/facebook\.com|fb\.watch/i,
+instagram:/instagram\.com/i,
+tiktok:/tiktok\.com|vt\.tiktok\.com/i
 }
 
-/* Priority detection */
-
-if(URL_PATTERNS.youtube.test(clean)) return "youtube"
-
-if(URL_PATTERNS.tiktok.test(clean)) return "tiktok"
-
-if(URL_PATTERNS.instagram.test(clean)) return "instagram"
-
-if(URL_PATTERNS.facebook.test(clean)) return "facebook"
+for(const [platform,pattern] of Object.entries(patterns)){
+if(pattern.test(url)) return platform
+}
 
 return null
-
-}
-
-/* ============================================= */
-
-export function getSupportedPlatforms(){
-
-return Object.keys(URL_PATTERNS)
-
-}
-
-/* ============================================= */
-
-export function extractVideoId(url,platform){
-
-if(!validateUrl(url,platform)) return null
-
-let clean = url.trim()
-
-if(!clean.startsWith("http")){
-clean = "https://" + clean
-}
-
-switch(platform){
-
-case "youtube":
-
-const yt = clean.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)
-return yt ? yt[1] : null
-
-case "instagram":
-
-const ig = clean.match(/\/(p|reel|tv)\/([a-zA-Z0-9_-]+)/)
-return ig ? ig[2] : null
-
-default:
-
-return null
-
-}
 
 }
