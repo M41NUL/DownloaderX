@@ -2,13 +2,14 @@
  * File: src/handler.js
  * MAINUL-X Downloader Bot
  * Author: Md. Mainul Islam (MAINUL-X)
- * GitHub: https://github.com/M41NUL
  */
 
 import fs from "fs"
 import path from "path"
 
 import { userState } from "./userState.js"
+
+import { handleCommands } from "./commands/commands.js"
 
 import { handleYouTubeDownloader } from "./features/youtube.js"
 import { handleFacebookDownloader } from "./features/facebook.js"
@@ -41,11 +42,11 @@ msg.message?.videoMessage?.caption ||
 
 const lower = text.toLowerCase().trim()
 
-/* ===============================
+/* =========================
 WELCOME MESSAGE
-================================ */
+========================= */
 
-if(greetings.includes(lower)){
+if(greetings.includes(lower) && state.step === "start"){
 
 await sock.sendMessage(from,{
 text:`👋 Welcome to *MAINUL - X DOWNLOADER BOT*
@@ -59,52 +60,66 @@ Send a video link directly or choose a platform below.
 • TikTok
 
 💡 Commands
-Type *!help* to see all bot commands`
+Type *!help* to see all commands`
 })
 
 await sendDownloaderMenu(sock,from)
 
+userState.set(from,{step:"menuMain"})
+
 return
 }
 
-/* ===============================
+/* =========================
+COMMAND SYSTEM
+========================= */
+
+if(await handleCommands(sock,from,lower)) return
+
+
+/* =========================
 AUTO LINK DETECT
-================================ */
+========================= */
 
 if(validateUrl(text,"youtube")){
 await handleYouTubeDownloader(sock,from,text)
+userState.set(from,{step:"menuMain"})
 return
 }
 
 if(validateUrl(text,"facebook")){
 await handleFacebookDownloader(sock,from,text)
+userState.set(from,{step:"menuMain"})
 return
 }
 
 if(validateUrl(text,"instagram")){
 await handleInstagramDownloader(sock,from,text)
+userState.set(from,{step:"menuMain"})
 return
 }
 
 if(validateUrl(text,"tiktok")){
 await handleTikTokDownloader(sock,from,text)
+userState.set(from,{step:"menuMain"})
 return
 }
 
-/* ===============================
-BUTTON / MENU RESPONSE
-================================ */
+/* =========================
+INTERACTIVE LIST RESPONSE
+========================= */
 
 let rowId
 
 try{
 
 if(msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage){
-rowId = JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson).id
-}
 
-if(msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId){
-rowId = msg.message.listResponseMessage.singleSelectReply.selectedRowId
+rowId = JSON.parse(
+msg.message.interactiveResponseMessage
+.nativeFlowResponseMessage.paramsJson
+).id
+
 }
 
 }catch{}
@@ -137,9 +152,9 @@ return
 
 }
 
-/* ===============================
+/* =========================
 STEP HANDLER
-================================ */
+========================= */
 
 switch(state.step){
 
@@ -151,7 +166,9 @@ return
 }
 
 await handleYouTubeDownloader(sock,from,text)
-break
+userState.set(from,{step:"menuMain"})
+return
+
 
 case "fb_wait_url":
 
@@ -161,7 +178,9 @@ return
 }
 
 await handleFacebookDownloader(sock,from,text)
-break
+userState.set(from,{step:"menuMain"})
+return
+
 
 case "ig_wait_url":
 
@@ -171,7 +190,9 @@ return
 }
 
 await handleInstagramDownloader(sock,from,text)
-break
+userState.set(from,{step:"menuMain"})
+return
+
 
 case "tt_wait_url":
 
@@ -181,25 +202,18 @@ return
 }
 
 await handleTikTokDownloader(sock,from,text)
-break
-
-default:
-
-await sendDownloaderMenu(sock,from)
-
-break
-
-}
-
 userState.set(from,{step:"menuMain"})
+return
 
 }
 
-/* ===============================
-MENU SYSTEM
-================================ */
+}
 
-export async function sendDownloaderMenu(sock,from){
+/* =========================
+INTERACTIVE MENU
+========================= */
+
+export async function sendDownloaderMenu(sock, from){
 
 await sock.sendMessage(from,{
 
@@ -207,15 +221,53 @@ image: fs.existsSync(menuImagePath)
 ? fs.readFileSync(menuImagePath)
 : undefined,
 
-caption:"🤖 *MAINUL-X Downloader Bot*\n\nChoose a platform below",
+caption:`🤖 *MAINUL - X DOWNLOADER BOT*
+
+Choose a platform below`,
 
 footer:"MAINUL-X SYSTEM",
 
-buttons:[
-{buttonId:"yt_downloader",buttonText:{displayText:"📺 YouTube"},type:1},
-{buttonId:"fb_downloader",buttonText:{displayText:"📘 Facebook"},type:1},
-{buttonId:"ig_downloader",buttonText:{displayText:"📸 Instagram"},type:1},
-{buttonId:"tt_downloader",buttonText:{displayText:"🎵 TikTok"},type:1}
+interactiveButtons:[
+{
+name:"single_select",
+buttonParamsJson:JSON.stringify({
+
+title:"📥 Video Downloader",
+
+sections:[
+{
+title:"Available Platforms",
+
+rows:[
+{
+title:"📺 YouTube Downloader",
+description:"Download videos from YouTube",
+id:"yt_downloader"
+},
+{
+title:"📘 Facebook Downloader",
+description:"Download videos from Facebook",
+id:"fb_downloader"
+},
+{
+title:"📸 Instagram Downloader",
+description:"Download reels & videos",
+id:"ig_downloader"
+},
+{
+title:"🎵 TikTok Downloader",
+description:"Download TikTok (No Watermark)",
+id:"tt_downloader"
+}
+]
+
+}
+]
+
+})
+
+}
+
 ]
 
 })
