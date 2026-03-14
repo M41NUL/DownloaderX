@@ -57,10 +57,11 @@ const job = queue.shift()
 
 try{
 await job()
-}catch{}
+}catch(err){
+console.log("Queue error:",err)
+}
 
 processing = false
-
 runQueue()
 
 }
@@ -71,12 +72,15 @@ TYPING EFFECT
 
 async function typing(sock,jid){
 
-await sock.presenceSubscribe(jid)
+try{
+
 await sock.sendPresenceUpdate("composing",jid)
 
-await new Promise(r => setTimeout(r,800))
+await new Promise(r=>setTimeout(r,800))
 
 await sock.sendPresenceUpdate("paused",jid)
+
+}catch{}
 
 }
 
@@ -157,6 +161,8 @@ type:1
 headerType:1
 })
 
+return
+
 }
 
 /* =========================
@@ -171,6 +177,7 @@ if(id === "start_menu"){
 
 await typing(sock,from)
 await sendDownloaderMenu(sock,from)
+
 return
 
 }
@@ -206,7 +213,11 @@ return
 COMMAND SYSTEM
 ========================= */
 
+try{
 if(await handleCommands(sock,from,lower)) return
+}catch(err){
+console.log("Command error:",err)
+}
 
 /* =========================
 SMART PLATFORM DETECT
@@ -306,6 +317,10 @@ msg.message.interactiveResponseMessage
 }
 
 }catch{}
+
+/* =========================
+MENU BUTTONS
+========================= */
 
 if(rowId){
 
