@@ -1,81 +1,83 @@
 /**
  * File: index.js
  * MAINUL-X Downloader Bot
- * Author: Md. Mainul Islam (MAINUL-X)
- * GitHub: https://github.com/M41NUL
  */
 
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
+import makeWASocket,{
+DisconnectReason,
+useMultiFileAuthState
+} from "@whiskeysockets/baileys"
+
 import pino from "pino"
 import fs from "fs"
-import path from "path"
 
 import { handler } from "./src/handler.js"
-import { wrapSendMessageGlobally } from "./src/utils/typing.js"
 import { WA_NUMBER } from "./config/number.js"
 
-process.on("uncaughtException",(err)=>{
-console.log("CRASH:",err)
-})
-
-process.on("unhandledRejection",(err)=>{
-console.log("PROMISE ERROR:",err)
-})
-
-const authDir = path.join(process.cwd(),"session")
+const authDir = "./session"
 
 async function startBot(){
 
 console.log("🚀 Starting MAINUL-X Downloader Bot")
 
+/* =========================
+CREATE SESSION FOLDER
+========================= */
+
 if(!fs.existsSync(authDir)){
 fs.mkdirSync(authDir)
 }
 
+/* =========================
+AUTH STATE
+========================= */
+
 const { state, saveCreds } = await useMultiFileAuthState(authDir)
+
+/* =========================
+SOCKET
+========================= */
 
 const sock = makeWASocket({
 auth: state,
-logger: pino({ level:"silent" }),
-printQRInTerminal:false,
-markOnlineOnConnect:true,
-syncFullHistory:false
+logger: pino({ level: "silent" }),
+printQRInTerminal: false,
+markOnlineOnConnect: true,
+syncFullHistory: false
 })
 
-wrapSendMessageGlobally(sock)
+/* =========================
+PAIRING CODE (ONLY FIRST TIME)
+========================= */
 
-/* ===============================
-PAIRING LOGIN
-================================ */
+const credsPath = `${authDir}/creds.json`
 
-const files = fs.readdirSync(authDir).filter(f=>f.endsWith(".json"))
+if(!fs.existsSync(credsPath)){
 
-if(files.length === 0){
-
-setTimeout(async ()=>{
+setTimeout(async()=>{
 
 try{
 
 const code = await sock.requestPairingCode(WA_NUMBER)
 
 console.log("")
-console.log("🔐 Pairing Code :",code)
-console.log("📱 Open WhatsApp → Linked Devices → Link Device")
+console.log("🔐 Pairing Code :", code)
+console.log("📱 WhatsApp → Linked Devices → Link Device")
 console.log("")
 
 }catch(err){
 
-console.log("Pairing Error:",err.message)
+console.log("Pairing Error:",err)
 
 }
 
-},4000)
+},3000)
 
 }
 
-/* ===============================
-CONNECTION EVENTS
-================================ */
+/* =========================
+CONNECTION UPDATE
+========================= */
 
 sock.ev.on("connection.update",(update)=>{
 
@@ -101,11 +103,11 @@ console.log("⚠ Connection closed, reconnecting...")
 
 setTimeout(()=>{
 startBot()
-},3000)
+},4000)
 
 }else{
 
-console.log("❌ Session logged out")
+console.log("❌ Session Logged Out")
 
 }
 
@@ -113,19 +115,21 @@ console.log("❌ Session logged out")
 
 })
 
-sock.ev.on("creds.update",saveCreds)
+/* =========================
+SAVE SESSION
+========================= */
 
-/* ===============================
+sock.ev.on("creds.update", saveCreds)
+
+/* =========================
 MESSAGE LISTENER
-================================ */
+========================= */
 
-sock.ev.on("messages.upsert",async(m)=>{
+sock.ev.on("messages.upsert", async ({ messages })=>{
 
 try{
 
-if(m.type !== "notify") return
-
-const msg = m.messages?.[0]
+const msg = messages?.[0]
 
 if(!msg) return
 if(!msg.message) return
@@ -142,5 +146,9 @@ console.log("Handler Error:",err)
 })
 
 }
+
+/* =========================
+START BOT
+========================= */
 
 startBot()
