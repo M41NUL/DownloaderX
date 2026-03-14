@@ -8,9 +8,6 @@
 import fs from "fs"
 import path from "path"
 
-import { BOT_NAME } from "../config/bot.js"
-import { WA_NUMBER } from "../config/number.js"
-
 import { userState } from "./userState.js"
 
 import { handleYouTubeDownloader } from "./features/youtube.js"
@@ -19,291 +16,39 @@ import { handleInstagramDownloader } from "./features/instagram.js"
 import { handleTikTokDownloader } from "./features/tiktok.js"
 
 import { validateUrl } from "./utils/validateUrl.js"
-import { checkSecurity } from "./utils/security.js"
-import { startProgress, finishProgress } from "./utils/progress.js"
-
-import { handleSystemCommands } from "./commands/system.js"
-import { handleCommands } from "./commands/commands.js"
 
 const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
 
-/* =========================
-MAIN HANDLER
-========================= */
+const greetings = [
+"hi","hello","hey","hlw","menu","start",
+"salam","assalamu alaikum","assalamualaikum",
+"bot","active","on"
+]
 
 export async function handler(sock,msg){
 
 if(!msg?.message) return
 
 const from = msg.key.remoteJid
-
-const state = userState.get(from) || { step:"start" }
+const state = userState.get(from) || {step:"start"}
 
 const text =
 msg.message?.conversation ||
 msg.message?.extendedTextMessage?.text ||
 msg.message?.imageMessage?.caption ||
-msg.message?.videoMessage?.caption
-
-if(!text){
-
-if(state.step === "start"){
-
-await sendWelcome(sock,from)
-
-userState.set(from,{step:"menuMain"})
-
-}
-
-return
-}
+msg.message?.videoMessage?.caption ||
+""
 
 const lower = text.toLowerCase().trim()
 
-/* =========================
-SECURITY SYSTEM
-========================= */
-
-const blocked = await checkSecurity(from)
-
-if(blocked) return
-
-/* =========================
-WELCOME TRIGGER
-========================= */
-
-const greet = [
-"hi",
-"hello",
-"start",
-"bot",
-"assalamu alaikum",
-"active",
-"on"
-]
-
-if(greet.includes(lower)){
-
-await sendWelcome(sock,from)
-
-return
-}
-
-/* =========================
-SYSTEM COMMANDS
-========================= */
-
-if(await handleSystemCommands(sock,from,lower)) return
-
-/* =========================
-CUSTOM COMMANDS
-========================= */
-
-if(await handleCommands(sock,from,lower)) return
-
-/* =========================
-SMART COMMAND DOWNLOADER
-========================= */
-
-if(lower.startsWith("!yt ")){
-
-const url = text.split(" ")[1]
-
-if(validateUrl(url,"youtube")){
-await handleYouTubeDownloader(sock,from,url)
-}
-
-return
-}
-
-if(lower.startsWith("!fb ")){
-
-const url = text.split(" ")[1]
-
-if(validateUrl(url,"facebook")){
-await handleFacebookDownloader(sock,from,url)
-}
-
-return
-}
-
-if(lower.startsWith("!ig ")){
-
-const url = text.split(" ")[1]
-
-if(validateUrl(url,"instagram")){
-await handleInstagramDownloader(sock,from,url)
-}
-
-return
-}
-
-if(lower.startsWith("!tt ")){
-
-const url = text.split(" ")[1]
-
-if(validateUrl(url,"tiktok")){
-await handleTikTokDownloader(sock,from,url)
-}
-
-return
-}
-
-/* =========================
-AUTO LINK DETECT
-========================= */
-
-if(validateUrl(text,"youtube")){
-await handleYouTubeDownloader(sock,from,text)
-return
-}
-
-if(validateUrl(text,"facebook")){
-await handleFacebookDownloader(sock,from,text)
-return
-}
-
-if(validateUrl(text,"instagram")){
-await handleInstagramDownloader(sock,from,text)
-return
-}
-
-if(validateUrl(text,"tiktok")){
-await handleTikTokDownloader(sock,from,text)
-return
-}
-
-/* =========================
-MENU INTERACTION
-========================= */
-
-let rowId
-
-try{
-
-if(msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage){
-
-rowId = JSON.parse(
-msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson
-).id
-
-}
-
-}catch{}
-
-if(rowId){
-
-switch(rowId){
-
-case "yt_downloader":
-
-userState.set(from,{step:"yt_wait_url"})
-
-await sock.sendMessage(from,{
-text:"📌 Send a *YouTube* video link"
-})
-
-break
-
-case "fb_downloader":
-
-userState.set(from,{step:"fb_wait_url"})
-
-await sock.sendMessage(from,{
-text:"📌 Send a *Facebook* video link"
-})
-
-break
-
-case "ig_downloader":
-
-userState.set(from,{step:"ig_wait_url"})
-
-await sock.sendMessage(from,{
-text:"📌 Send an *Instagram* video link"
-})
-
-break
-
-case "tt_downloader":
-
-userState.set(from,{step:"tt_wait_url"})
-
-await sock.sendMessage(from,{
-text:"📌 Send a *TikTok* video link"
-})
-
-break
-
-case "command_list":
-
-await handleSystemCommands(sock,from,"!help")
-
-break
-
-}
-
-return
-}
-
-/* =========================
-WAIT MODE
-========================= */
-
-switch(state.step){
-
-case "yt_wait_url":
-
-if(validateUrl(text,"youtube")){
-await handleYouTubeDownloader(sock,from,text)
-}
-
-break
-
-case "fb_wait_url":
-
-if(validateUrl(text,"facebook")){
-await handleFacebookDownloader(sock,from,text)
-}
-
-break
-
-case "ig_wait_url":
-
-if(validateUrl(text,"instagram")){
-await handleInstagramDownloader(sock,from,text)
-}
-
-break
-
-case "tt_wait_url":
-
-if(validateUrl(text,"tiktok")){
-await handleTikTokDownloader(sock,from,text)
-}
-
-break
-
-default:
-
-await sendDownloaderMenu(sock,from)
-
-break
-
-}
-
-userState.set(from,{step:"menuMain"})
-
-}
-
-/* =========================
+/* ===============================
 WELCOME MESSAGE
-========================= */
+================================ */
 
-async function sendWelcome(sock,from){
+if(greetings.includes(lower)){
 
 await sock.sendMessage(from,{
-text:`👋 Welcome to *${BOT_NAME}*
+text:`👋 Welcome to *MAINUL - X DOWNLOADER BOT*
 
 Send a video link directly or choose a platform below.
 
@@ -319,65 +64,160 @@ Type *!help* to see all bot commands`
 
 await sendDownloaderMenu(sock,from)
 
+return
 }
 
-/* =========================
-DOWNLOADER MENU
-========================= */
+/* ===============================
+AUTO LINK DETECT
+================================ */
+
+if(validateUrl(text,"youtube")){
+await handleYouTubeDownloader(sock,from,text)
+return
+}
+
+if(validateUrl(text,"facebook")){
+await handleFacebookDownloader(sock,from,text)
+return
+}
+
+if(validateUrl(text,"instagram")){
+await handleInstagramDownloader(sock,from,text)
+return
+}
+
+if(validateUrl(text,"tiktok")){
+await handleTikTokDownloader(sock,from,text)
+return
+}
+
+/* ===============================
+BUTTON / MENU RESPONSE
+================================ */
+
+let rowId
+
+try{
+
+if(msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage){
+rowId = JSON.parse(msg.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson).id
+}
+
+if(msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId){
+rowId = msg.message.listResponseMessage.singleSelectReply.selectedRowId
+}
+
+}catch{}
+
+if(rowId){
+
+switch(rowId){
+
+case "yt_downloader":
+userState.set(from,{step:"yt_wait_url"})
+await sock.sendMessage(from,{text:"📺 Send YouTube video link"})
+return
+
+case "fb_downloader":
+userState.set(from,{step:"fb_wait_url"})
+await sock.sendMessage(from,{text:"📘 Send Facebook video link"})
+return
+
+case "ig_downloader":
+userState.set(from,{step:"ig_wait_url"})
+await sock.sendMessage(from,{text:"📸 Send Instagram video link"})
+return
+
+case "tt_downloader":
+userState.set(from,{step:"tt_wait_url"})
+await sock.sendMessage(from,{text:"🎵 Send TikTok video link"})
+return
+
+}
+
+}
+
+/* ===============================
+STEP HANDLER
+================================ */
+
+switch(state.step){
+
+case "yt_wait_url":
+
+if(!validateUrl(text,"youtube")){
+await sock.sendMessage(from,{text:"❌ Invalid YouTube link"})
+return
+}
+
+await handleYouTubeDownloader(sock,from,text)
+break
+
+case "fb_wait_url":
+
+if(!validateUrl(text,"facebook")){
+await sock.sendMessage(from,{text:"❌ Invalid Facebook link"})
+return
+}
+
+await handleFacebookDownloader(sock,from,text)
+break
+
+case "ig_wait_url":
+
+if(!validateUrl(text,"instagram")){
+await sock.sendMessage(from,{text:"❌ Invalid Instagram link"})
+return
+}
+
+await handleInstagramDownloader(sock,from,text)
+break
+
+case "tt_wait_url":
+
+if(!validateUrl(text,"tiktok")){
+await sock.sendMessage(from,{text:"❌ Invalid TikTok link"})
+return
+}
+
+await handleTikTokDownloader(sock,from,text)
+break
+
+default:
+
+await sendDownloaderMenu(sock,from)
+
+break
+
+}
+
+userState.set(from,{step:"menuMain"})
+
+}
+
+/* ===============================
+MENU SYSTEM
+================================ */
 
 export async function sendDownloaderMenu(sock,from){
 
 await sock.sendMessage(from,{
-image:fs.readFileSync(menuImagePath),
-caption:`🤖 ${BOT_NAME}
 
-Choose a platform below`,
+image: fs.existsSync(menuImagePath)
+? fs.readFileSync(menuImagePath)
+: undefined,
+
+caption:"🤖 *MAINUL-X Downloader Bot*\n\nChoose a platform below",
+
 footer:"MAINUL-X SYSTEM",
-interactiveButtons:[
-{
-name:"single_select",
-buttonParamsJson:JSON.stringify({
-title:"Video Downloader",
-sections:[
-{
-title:"Available Platforms",
-rows:[
-{
-title:"YouTube Downloader",
-description:"Download videos from YouTube",
-id:"yt_downloader"
-},
-{
-title:"Facebook Downloader",
-description:"Download videos from Facebook",
-id:"fb_downloader"
-},
-{
-title:"Instagram Downloader",
-description:"Download reels & videos from Instagram",
-id:"ig_downloader"
-},
-{
-title:"TikTok Downloader",
-description:"Download TikTok videos (No Watermark)",
-id:"tt_downloader"
-}
+
+buttons:[
+{buttonId:"yt_downloader",buttonText:{displayText:"📺 YouTube"},type:1},
+{buttonId:"fb_downloader",buttonText:{displayText:"📘 Facebook"},type:1},
+{buttonId:"ig_downloader",buttonText:{displayText:"📸 Instagram"},type:1},
+{buttonId:"tt_downloader",buttonText:{displayText:"🎵 TikTok"},type:1}
 ]
-},
-{
-title:"System",
-rows:[
-{
-title:"Show Command List",
-description:"Display all bot commands",
-id:"command_list"
-}
-]
-}
-]
-})
-}
-]
+
 })
 
 }
