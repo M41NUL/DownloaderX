@@ -44,6 +44,10 @@ syncFullHistory:false
 
 wrapSendMessageGlobally(sock)
 
+/* ===============================
+PAIRING LOGIN
+================================ */
+
 const files = fs.readdirSync(authDir).filter(f=>f.endsWith(".json"))
 
 if(files.length === 0){
@@ -68,6 +72,10 @@ console.log("Pairing Error:",err.message)
 },4000)
 
 }
+
+/* ===============================
+CONNECTION EVENTS
+================================ */
 
 sock.ev.on("connection.update",(update)=>{
 
@@ -107,9 +115,15 @@ console.log("❌ Session logged out")
 
 sock.ev.on("creds.update",saveCreds)
 
+/* ===============================
+MESSAGE LISTENER
+================================ */
+
 sock.ev.on("messages.upsert",async(m)=>{
 
 try{
+
+if(m.type !== "notify") return
 
 const msg = m.messages?.[0]
 
