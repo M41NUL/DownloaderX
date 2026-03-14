@@ -20,7 +20,7 @@ import { handleTikTokDownloader } from "./features/tiktok.js"
 
 import { validateUrl } from "./utils/validateUrl.js"
 import { checkSecurity } from "./utils/security.js"
-import { showProgress } from "./utils/progress.js"
+import { startProgress, finishProgress } from "./utils/progress.js"
 
 import { handleSystemCommands } from "./commands/system.js"
 import { handleCommands } from "./commands/commands.js"
