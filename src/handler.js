@@ -4,9 +4,6 @@
  * Author: Md. Mainul Islam (MAINUL-X)
  */
 
-import fs from "fs"
-import path from "path"
-
 import { userState } from "./userState.js"
 import { handleCommands } from "./commands/commands.js"
 
@@ -16,8 +13,7 @@ import { handleInstagramDownloader } from "./features/instagram.js"
 import { handleTikTokDownloader } from "./features/tiktok.js"
 
 import { validateUrl } from "./utils/validateUrl.js"
-
-const menuImagePath = path.join(process.cwd(),"src/assets/menu.jpg")
+import { sendDownloaderMenu } from "./utils/menu.js"
 
 /* =========================
 WELCOME TRACKER
@@ -36,7 +32,6 @@ return true
 }
 
 return false
-
 }
 
 /* =========================
@@ -76,7 +71,7 @@ try{
 
 await sock.sendPresenceUpdate("composing",jid)
 
-await new Promise(r=>setTimeout(r,800))
+await new Promise(r=>setTimeout(r,700))
 
 await sock.sendPresenceUpdate("paused",jid)
 
@@ -496,70 +491,5 @@ userState.set(from,{step:"menuMain"})
 return
 
 }
-
-}
-
-/* =========================
-DOWNLOADER MENU
-========================= */
-
-export async function sendDownloaderMenu(sock, from){
-
-await sock.sendMessage(from,{
-
-image: fs.existsSync(menuImagePath)
-? fs.readFileSync(menuImagePath)
-: undefined,
-
-caption:`🤖 *MAINUL - X DOWNLOADER BOT*
-
-Choose a platform below`,
-
-footer:"MAINUL-X SYSTEM",
-
-interactiveButtons:[
-{
-name:"single_select",
-buttonParamsJson:JSON.stringify({
-
-title:"📥 Video Downloader",
-
-sections:[
-{
-title:"Available Platforms",
-
-rows:[
-{
-title:"📺 YouTube Downloader",
-description:"Download videos from YouTube",
-id:"yt_downloader"
-},
-{
-title:"📘 Facebook Downloader",
-description:"Download videos from Facebook",
-id:"fb_downloader"
-},
-{
-title:"📸 Instagram Downloader",
-description:"Download reels & videos",
-id:"ig_downloader"
-},
-{
-title:"🎵 TikTok Downloader",
-description:"Download TikTok (No Watermark)",
-id:"tt_downloader"
-}
-]
-
-}
-]
-
-})
-
-}
-
-]
-
-})
 
 }
