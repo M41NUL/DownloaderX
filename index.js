@@ -1,6 +1,7 @@
 /**
  * File: index.js
  * MAINUL-X Downloader Bot
+ * Termux Version
  * Author: Md. Mainul Islam (MAINUL-X)
  */
 
@@ -8,28 +9,30 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeys
 import pino from "pino"
 import fs from "fs"
 import path from "path"
+import readline from "readline"
 
 import { handler } from "./src/handler.js"
 import { wrapSendMessageGlobally } from "./src/utils/typing.js"
-
-import { WA_NUMBER } from "./config/number.js"
 import { BOT_NAME } from "./config/bot.js"
 
 const authDir = path.join(process.cwd(),"session")
 
-let messageCount = 0
-
 /* =========================
-ERROR HANDLER
+INPUT SYSTEM
 ========================= */
 
-process.on("uncaughtException",(err)=>{
-console.log("💥 Uncaught Exception:",err)
+const rl = readline.createInterface({
+input: process.stdin,
+output: process.stdout
 })
 
-process.on("unhandledRejection",(err)=>{
-console.log("💥 Unhandled Rejection:",err)
+function question(text){
+
+return new Promise(resolve=>{
+rl.question(text,resolve)
 })
+
+}
 
 /* =========================
 START BOT
@@ -39,60 +42,49 @@ async function startBot(){
 
 console.log("")
 console.log("🚀 Starting MAINUL-X Downloader Bot")
-console.log("📦 Platform : Railway")
+console.log("📱 Platform : Termux")
 console.log("👨‍💻 Developer : Md. Mainul Islam (MAINUL-X)")
 console.log("")
-
-/* =========================
-CREATE SESSION FOLDER
-========================= */
 
 if(!fs.existsSync(authDir)){
 fs.mkdirSync(authDir,{recursive:true})
 }
 
-/* =========================
-AUTH STATE
-========================= */
-
 const { state, saveCreds } = await useMultiFileAuthState(authDir)
-
-/* =========================
-CREATE SOCKET
-========================= */
 
 const sock = makeWASocket({
 
 auth: state,
 logger: pino({ level:"silent" }),
-printQRInTerminal:false,
-markOnlineOnConnect:true,
-syncFullHistory:false
+printQRInTerminal:true,
+markOnlineOnConnect:true
 
 })
 
 wrapSendMessageGlobally(sock)
 
 /* =========================
-PAIRING CODE (FIRST TIME ONLY)
+PAIRING SYSTEM
 ========================= */
 
 const credsPath = path.join(authDir,"creds.json")
 
 if(!fs.existsSync(credsPath)){
 
+const number = await question("📱 Enter WhatsApp number (without +) : ")
+
 try{
 
-const code = await sock.requestPairingCode(WA_NUMBER)
+const code = await sock.requestPairingCode(number)
 
 console.log("")
 console.log("🔐 Pairing Code :",code)
-console.log("📱 WhatsApp → Linked Devices → Link Device")
+console.log("📲 WhatsApp → Linked Devices → Link Device")
 console.log("")
 
 }catch(err){
 
-console.log("Pairing Error :",err.message)
+console.log("❌ Pairing Error :",err.message)
 
 }
 
@@ -118,7 +110,7 @@ console.log(`🤖 ${BOT_NAME} Running`)
 if(connection === "close"){
 
 const shouldReconnect =
-(lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut)
+lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
 
 if(shouldReconnect){
 
@@ -158,29 +150,16 @@ if(!msg) return
 if(!msg.message) return
 if(msg.key.fromMe) return
 
-messageCount++
-
-const text =
-msg.message?.conversation ||
-msg.message?.extendedTextMessage?.text ||
-"non-text"
-
-console.log(`📩 [${messageCount}] ${msg.key.remoteJid} : ${text}`)
-
 await handler(sock,msg)
 
 }catch(err){
 
-console.log("❌ Handler Error:",err)
+console.log("Handler Error:",err)
 
 }
 
 })
 
 }
-
-/* =========================
-RUN BOT
-========================= */
 
 startBot()
