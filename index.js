@@ -4,7 +4,7 @@
  * Author: Md. Mainul Islam (MAINUL-X)
  */
 
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys"
 import pino from "pino"
 import fs from "fs"
 import path from "path"
@@ -74,14 +74,12 @@ syncFullHistory:false
 wrapSendMessageGlobally(sock)
 
 /* =========================
-PAIRING CODE
+PAIRING CODE (FIRST TIME ONLY)
 ========================= */
 
 const credsPath = path.join(authDir,"creds.json")
 
 if(!fs.existsSync(credsPath)){
-
-setTimeout(async()=>{
 
 try{
 
@@ -97,8 +95,6 @@ console.log("")
 console.log("Pairing Error :",err.message)
 
 }
-
-},4000)
 
 }
 
@@ -122,7 +118,7 @@ console.log(`🤖 ${BOT_NAME} Running`)
 if(connection === "close"){
 
 const shouldReconnect =
-lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
+(lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut)
 
 if(shouldReconnect){
 
