@@ -1,116 +1,72 @@
-import os from "os"
+/**
+ * File: src/commands/system.js
+ * MAINUL-X Downloader Bot
+ * Author: Md. Mainul Islam (MAINUL-X)
+ * GitHub: https://github.com/M41NUL
+ */
 
-export async function handleSystemCommands(sock, from, command, config, startTime){
+export async function handleSystemCommands(sock,from,text){
 
-if(command === "!ping"){
+const cmd = text.toLowerCase()
 
-const start = Date.now()
-
-const msg = await sock.sendMessage(from,{text:"🏓 Pinging..."})
-
-const end = Date.now()
+if(cmd === "!help"){
 
 await sock.sendMessage(from,{
-text:`⚡ Pong\nResponse: ${end-start} ms`,
-edit:msg.key
+text:`📜 *MAINUL - X DOWNLOADER BOT*
+
+━━━━━━━━━━━━━━
+
+⚙️ *SYSTEM COMMANDS*
+
+!ping
+Check bot response speed
+
+!uptime
+Show how long the bot is running
+
+!runtime
+Display bot runtime status
+
+!alive
+Check if the bot is active
+
+━━━━━━━━━━━━━━
+
+👤 *USER COMMANDS*
+
+!menu
+Show main menu
+
+!help
+Display command list
+
+!owner
+Contact bot owner
+
+!dev
+Developer information
+
+━━━━━━━━━━━━━━
+
+⬇️ *DOWNLOADER COMMANDS*
+
+!yt
+Download YouTube video
+
+!fb
+Download Facebook video
+
+!ig
+Download Instagram reels/video
+
+!tt
+Download TikTok video (No Watermark)
+
+━━━━━━━━━━━━━━
+⚡ Powered by MAINUL-X`
 })
 
 return true
-
-}
-
-if(command === "!uptime"){
-
-const uptime = Math.floor((Date.now()-startTime)/1000)
-
-const h = Math.floor(uptime/3600)
-const m = Math.floor((uptime%3600)/60)
-const s = uptime%60
-
-await sock.sendMessage(from,{
-text:`⏱ BOT UPTIME\n\n${h}h ${m}m ${s}s`
-})
-
-return true
-
-}
-
-if(command === "!stats"){
-
-const ram = Math.round(process.memoryUsage().rss/1024/1024)
-
-await sock.sendMessage(from,{
-text:`📊 BOT STATS
-
-RAM Usage : ${ram} MB
-Platform : Node.js
-Status : Online`
-})
-
-return true
-
-}
-
-if(command === "!system"){
-
-await sock.sendMessage(from,{
-text:`⚙ SYSTEM INFO
-
-OS : ${os.platform()}
-CPU : ${os.cpus().length} cores
-RAM : ${(os.totalmem()/1024/1024/1024).toFixed(2)} GB
-Node : ${process.version}`
-})
-
-return true
-
-}
-
-if(command === "!alive"){
-
-await sock.sendMessage(from,{
-text:`🤖 ${config.BOT_NAME}
-
-Status : Online
-System : Running
-Connection : Stable`
-})
-
-return true
-
-}
-
-if(command === "!runtime"){
-
-const runtime = process.uptime()
-
-const h = Math.floor(runtime/3600)
-const m = Math.floor((runtime%3600)/60)
-const s = Math.floor(runtime%60)
-
-await sock.sendMessage(from,{
-text:`⏱ RUNTIME
-
-${h}h ${m}m ${s}s`
-})
-
-return true
-
-}
-
-if(command === "!botinfo"){
-
-await sock.sendMessage(from,{
-text:`🤖 BOT INFO
-
-Name : ${config.BOT_NAME}
-Version : v${config.VERSION}
-Platform : WhatsApp MD
-Developer : ${config.OWNER_ALIAS}`
-})
-
-return true
-
 }
 
 return false
