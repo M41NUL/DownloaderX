@@ -3,10 +3,7 @@
  * MAINUL-X Downloader Bot
  */
 
-import makeWASocket,{
-DisconnectReason,
-useMultiFileAuthState
-} from "@whiskeysockets/baileys"
+import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "atexovi-baileys"
 
 import pino from "pino"
 import fs from "fs"
