@@ -1,5 +1,5 @@
 /**
- * File: index.js (FIXED VERSION)
+ * File: index.js (FINAL)
  * MAINUL-X Downloader Bot
  * Author: Md. Mainul Islam (MAINUL-X)
  */
@@ -14,6 +14,16 @@ import { WA_NUMBER } from "./config/number.js"
 import { BOT_NAME } from "./config/bot.js"
 
 const authDir = path.join(process.cwd(), "session")
+let messageCount = 0
+
+// Error handlers
+process.on('uncaughtException', (err) => {
+  console.log("💥 Uncaught Exception:", err)
+})
+
+process.on('unhandledRejection', (err) => {
+  console.log("💥 Unhandled Rejection:", err)
+})
 
 async function startBot() {
   console.log("")
@@ -89,7 +99,7 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds)
 
   /* =========================
-  FIXED MESSAGE LISTENER
+  MESSAGE LISTENER
   ========================= */
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     try {
@@ -99,7 +109,6 @@ async function startBot() {
       const msg = messages?.[0]
       if (!msg) return
       
-
       if (!msg.message) {
         console.log("⚠️ Empty message received")
         return
@@ -107,15 +116,15 @@ async function startBot() {
       
       if (msg.key.fromMe) return
 
+      messageCount++
       
       const text = 
         msg.message?.conversation ||
         msg.message?.extendedTextMessage?.text ||
         "non-text"
       
-      console.log("📩 Message from:", msg.key.remoteJid, "Text:", text)
+      console.log(`📩 [${messageCount}] Message from:`, msg.key.remoteJid, "Text:", text)
 
-      // 👇 হ্যান্ডলার কল করুন
       await handler(sock, msg)
 
     } catch (err) {
